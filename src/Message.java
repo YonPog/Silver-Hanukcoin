@@ -5,6 +5,8 @@ public class Message {
     private final ArrayList<Node> nodes;
     private final int blocks_count = 0; // 0 just for this stage
 
+    //this is a new comment!
+
     public Message(int cmd, ArrayList<Node> nodes) {
         this.cmd = cmd;
         this.nodes = nodes;
