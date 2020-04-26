@@ -8,6 +8,7 @@ public class UtilsTest {
 
     @Test
     public void bytesToInt() {
+        System.out.println("Hi from tester!");
         Assert.assertArrayEquals(Utils.intToBytes(0, 2), new byte[] {0, 0});
         Assert.assertArrayEquals(Utils.intToBytes(1, 2), new byte[]{0, 0x1});
         Assert.assertArrayEquals(Utils.intToBytes(4660, 2), new byte[]{0x12, 0x34});
