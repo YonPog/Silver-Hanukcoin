@@ -25,38 +25,38 @@ public class Test {
                 6, 115, 105, 108, 118, 101, 114, 7, 53, 46, 52, 46, 51, 46, 50, 2, 55, 0, 0, 3, (byte) 219};
 
         MessageParser parser = new MessageParser(b1);
-        Message message = parser.toMessage();
-        if (message.getCmd() != 1){
-            System.out.println("Error in cmd");
-        }
-        if (message.getNodes_count() != 2){
-            System.out.println("Error in nodes_count");
-        }
+            Message message = parser.toMessage();
+            if (message.getCmd() != 1){
+                System.out.println("Error in cmd");
+            }
+            if (message.getNodes_count() != 2){
+                System.out.println("Error in nodes_count");
+            }
 
-        if (!message.getNodes().get(0).getName().equals("test_name")){
-            System.out.println("Error in name of node 1");
-        }
-        if (!message.getNodes().get(0).getHost().equals("1.3.3.7")){
-            System.out.println("Error in host of node 1");
-        }
-        if (message.getNodes().get(0).getPort() != 42){
-            System.out.println("Error in port of node 1");
-        }
-        if (message.getNodes().get(0).getLast_seen_ts() != 123){
-            System.out.println("Error in timestamp of node 1");
-        }
+            if (!message.getNodes().get(0).getName().equals("test_name")){
+                System.out.println("Error in name of node 1");
+            }
+            if (!message.getNodes().get(0).getHost().equals("1.3.3.7")){
+                System.out.println("Error in host of node 1");
+            }
+            if (message.getNodes().get(0).getPort() != 42){
+                System.out.println("Error in port of node 1");
+            }
+            if (message.getNodes().get(0).getLast_seen_ts() != 123){
+                System.out.println("Error in timestamp of node 1");
+            }
 
-        if (!message.getNodes().get(1).getName().equals("silver")){
-            System.out.println("Error in name of node 2");
-        }
-        if (!message.getNodes().get(1).getHost().equals("5.4.3.2")){
-            System.out.println("Error in host of node 2");
-        }
-        if (message.getNodes().get(1).getPort() != 567){
-            System.out.println("Error in port of node 2");
-        }
-        if (message.getNodes().get(1).getLast_seen_ts() != 987){
-            System.out.println("Error in timestamp of node 2");
+            if (!message.getNodes().get(1).getName().equals("silver")){
+                System.out.println("Error in name of node 2");
+            }
+            if (!message.getNodes().get(1).getHost().equals("5.4.3.2")){
+                System.out.println("Error in host of node 2");
+            }
+            if (message.getNodes().get(1).getPort() != 567){
+                System.out.println("Error in port of node 2");
+            }
+            if (message.getNodes().get(1).getLast_seen_ts() != 987){
+                System.out.println("Error in timestamp of node 2");
         }
         if(!Arrays.equals(Utils.intToBytes(0, 2), new byte[]{0, 0})){
             System.out.println(Arrays.toString(Utils.intToBytes(0, 2)));
