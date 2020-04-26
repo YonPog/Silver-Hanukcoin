@@ -57,6 +57,6 @@ public class Node {
 
     @Override
     public String toString(){
-        return String.format("<Node %s on %s : %d, last seen %d>\n", this.name, this.host, this.port, this.last_seen_ts);
+        return String.format("<Node %s on %s:%d, last seen %d>\n", this.name, this.host, this.port, this.last_seen_ts);
     }
 }
