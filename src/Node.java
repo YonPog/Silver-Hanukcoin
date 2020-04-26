@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class Node {
     private String name;
     private String host;
@@ -44,8 +47,12 @@ public class Node {
     }
 
     public byte[] toBytes(){
-        // TODO
-        return null;
+        byte[] name = this.name.getBytes();
+        byte[] host = this.host.getBytes();
+        byte[] port = Utils.intToBytes(this.port, 2);
+        byte[] ts = Utils.intToBytes(this.last_seen_ts, 4);
+        return Utils.concat(new byte[]{(byte) name.length}, name, new byte[]{(byte) host.length}, host, port, ts);
+
     }
 
     @Override

@@ -76,6 +76,12 @@ public class Test {
             System.out.println("Error in Utils.intToBytes 5");
         }
 
+        if(!Arrays.equals(message.getNodes().get(0).toBytes(), new byte[]{9, 116, 101, 115, 116, 95, 110, 97, 109, 101, 7, 49, 46, 51, 46, 51, 46, 55, 0, 42, 0, 0, 0, 123})){
+            System.out.println("Error!");
+        }
 
+        if(!Arrays.equals(message.getNodes().get(1).toBytes(), new byte[]{6, 115, 105, 108, 118, 101, 114, 7, 53, 46, 52, 46, 51, 46, 50, 2, 55, 0, 0, 3, (byte) 219})){
+            System.out.println("Error!");
+        }
     }
 }

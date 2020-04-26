@@ -1,3 +1,6 @@
+import java.lang.reflect.Array;
+import java.util.Arrays;
+
 public class Utils {
     /**
      * @param data At least 1 byte long.
@@ -24,4 +27,21 @@ public class Utils {
         return ret;
     }
 
+    private static void copyInto(byte[] arr, byte[] base, int offset){
+        for (int i = 0 ; i < arr.length && i + offset < base.length ; ++i){
+            base[offset + i] = arr[i];
+        }
+    }
+
+    public static byte[] concat(byte[] ... arrays){
+        int sumLengths = 0;
+        for (byte[] arr : arrays){ sumLengths += arr.length; }
+        byte[] merged = Arrays.copyOf(arrays[0], sumLengths);
+        int offset = 0;
+        for (byte[] arr : arrays){
+            copyInto(arr, merged, offset);
+            offset += arr.length;
+        }
+        return merged;
+    }
 }
