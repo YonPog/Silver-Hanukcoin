@@ -1,4 +1,3 @@
-import java.lang.reflect.Array;
 import java.util.Arrays;
 
 public class Utils {
@@ -34,6 +33,7 @@ public class Utils {
     }
 
     public static byte[] concat(byte[] ... arrays){
+        if (arrays.length == 0) {return new byte[0]; }
         int sumLengths = 0;
         for (byte[] arr : arrays){ sumLengths += arr.length; }
         byte[] merged = Arrays.copyOf(arrays[0], sumLengths);
