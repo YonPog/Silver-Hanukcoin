@@ -4,7 +4,7 @@ import java.util.Arrays;
 public class Utils {
     /**
      * @param data At least 1 byte long.
-     * @return Unsigned integer value of data in big endian.
+     * @return Unsigned integer value of data in big endian
      */
     public static int bytesToInt(byte[] data){
         int n = data.length;
