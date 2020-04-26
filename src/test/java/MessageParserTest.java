@@ -47,6 +47,8 @@ public class MessageParserTest {
         Assert.assertEquals(message.getNodes().get(1).getPort(), 567);
         Assert.assertEquals(message.getNodes().get(1).getLast_seen_ts(), 987);
 
+        System.out.println("All done!");
+
     }
 
 }
