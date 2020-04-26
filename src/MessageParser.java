@@ -22,26 +22,11 @@ public class MessageParser {
     }
 
     /**
-     * @param data At least 1 byte long.
-     * @return Unsigned integer value of data in big endian.
-     */
-    private static int bytesToInt(byte[] data){
-        int n = data.length;
-        int ret = data[n - 1] & 0xFF;
-        for (int i = n - 2; i >= 0; i--){
-            // Masking to cancel sign extension.
-            ret |= (data[i] & 0xFF) << (8 * (n - i - 1));
-        }
-
-        return ret;
-    }
-
-    /**
      * @return The cmd part of the protocol specification.
      */
     private int parseCmd(){
         byte[] bytes = Arrays.copyOfRange(this.stream, 0, 4);
-        return bytesToInt(bytes);
+        return Utils.bytesToInt(bytes);
     }
 
     /**
@@ -49,7 +34,7 @@ public class MessageParser {
      */
     private int parseNodesCount(){
         byte[] count = Arrays.copyOfRange(this.stream, 8, 12);
-        return bytesToInt(count);
+        return Utils.bytesToInt(count);
     }
 
     /**
@@ -91,10 +76,10 @@ public class MessageParser {
 
         // After the host name length and name there is the port number.
         int portIndex = hostLenIndex + 1 + host_len;
-        int port = bytesToInt(Arrays.copyOfRange(this.stream, portIndex, portIndex + 2));
+        int port = Utils.bytesToInt(Arrays.copyOfRange(this.stream, portIndex, portIndex + 2));
 
         // Port is 2 bytes, after them there are 4 bytes of the timestamp.
-        int lastSeenTs = bytesToInt(Arrays.copyOfRange(this.stream,
+        int lastSeenTs = Utils.bytesToInt(Arrays.copyOfRange(this.stream,
                 portIndex + 2, // 2 bytes after the port.
                 portIndex + 6));
 

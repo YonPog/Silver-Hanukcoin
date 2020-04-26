@@ -1,7 +1,8 @@
+import java.util.Arrays;
+
 public class Test {
     public static void main(String[] args) {
         testParser();
-        System.out.println("no errors... (so far!)");
     }
 
     public static void testParser(){
@@ -56,6 +57,23 @@ public class Test {
         }
         if (message.getNodes().get(1).getLast_seen_ts() != 987){
             System.out.println("Error in timestamp of node 2");
+        }
+        if(!Arrays.equals(Utils.intToBytes(0, 2), new byte[]{0, 0})){
+            System.out.println(Arrays.toString(Utils.intToBytes(0, 2)));
+            System.out.println("Error in Utils.intToBytes 1");
+        }
+        if(!Arrays.equals(Utils.intToBytes(1, 2), new byte[]{0, 0x1})){
+            System.out.println("Error in Utils.intToBytes 2");
+        }
+        if(!Arrays.equals(Utils.intToBytes(4660, 2), new byte[]{0x12, 0x34})){
+            System.out.println(Arrays.toString(Utils.intToBytes(4660, 2)));
+            System.out.println("Error in Utils.intToBytes 3");
+        }
+        if(Utils.bytesToInt(Utils.intToBytes(1337, 10)) != 1337){
+            System.out.println("Error in Utils.intToBytes 4");
+        }
+        if(!Arrays.equals(Utils.intToBytes(Utils.bytesToInt(new byte[] {0, 0, 0x25, 0x3, 0, 0x4}),6),new byte[] {0, 0, 0x25, 0x3, 0, 0x4})){
+            System.out.println("Error in Utils.intToBytes 5");
         }
 
 
