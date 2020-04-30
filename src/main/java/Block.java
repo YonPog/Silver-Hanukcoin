@@ -17,14 +17,14 @@ public class Block {
 
     @Override
     public String toString(){
-        return String.format("<Block #%d from wallet #%d>", serial_number, wallet);
+        return String.format("<Block #%d from wallet #%d>\n", serial_number, wallet);
     }
 
     public String toString(boolean full){
         if (full){
             return String.format("<Block #%d from wallet #%d\n" +
                                         "puzzle: %s\n" +
-                                        "signature: %s", serial_number, wallet, Arrays.toString(puzzle), Arrays.toString(sig));
+                                        "signature: %s\n", serial_number, wallet, Arrays.toString(puzzle), Arrays.toString(sig));
         }
 
         return this.toString();
