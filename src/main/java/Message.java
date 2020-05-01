@@ -33,29 +33,40 @@ public class Message {
         return blocks.size();
     }
 
-    public ArrayList<Block> getBlocks() { return blocks; }
+    public ArrayList<Block> getBlocks() {
+        return blocks;
+    }
 
-    public int getNodes_count(){
+    public int getNodes_count() {
         return nodes.size();
     }
 
-    private byte[][] getNodesArray(){
+    /**
+     * @return A 2D byte array, each inner array is representing one node according to the message.
+     */
+    private byte[][] getNodesArray() {
         byte[][] ret = new byte[this.getNodes_count()][];
-        for (int i = 0 ; i < ret.length ; ++i){
+        for (int i = 0; i < ret.length; ++i) {
             ret[i] = this.nodes.get(i).toBytes();
         }
         return ret;
     }
 
-    private byte[][] getBlocksArray(){
+    /**
+     * @return A 2D byte array, each inner array is representing one block according to the message.
+     */
+    private byte[][] getBlocksArray() {
         byte[][] ret = new byte[this.getBlocks_count()][];
-        for (int i = 0 ; i < ret.length ; ++i){
+        for (int i = 0; i < ret.length; ++i) {
             ret[i] = this.blocks.get(i).toBytes();
         }
         return ret;
     }
 
-    public byte[] toBytes(){
+    /**
+     * @return The byte representation of the message to be sent, in a byte array.
+     */
+    public byte[] toBytes() {
         byte[] cmd = Utils.intToBytes(this.cmd, 4);
         byte[] nodes_count = Utils.intToBytes(this.getNodes_count(), 4);
         byte[] nodes = Utils.concat(this.getNodesArray());

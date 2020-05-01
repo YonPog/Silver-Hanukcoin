@@ -20,17 +20,20 @@ public class Block {
         return String.format("<Block #%d from wallet #%d>\n", serial_number, wallet);
     }
 
-    public String toString(boolean full){
-        if (full){
+    public String toString(boolean full) {
+        if (full) {
             return String.format("<Block #%d from wallet #%d\n" +
-                                        "puzzle: %s\n" +
-                                        "signature: %s\n", serial_number, wallet, Arrays.toString(puzzle), Arrays.toString(sig));
+                    "puzzle: %s\n" +
+                    "signature: %s\n", serial_number, wallet, Arrays.toString(puzzle), Arrays.toString(sig));
         }
 
         return this.toString();
     }
 
-    public byte[] toBytes(){
+    /**
+     * @return The byte representation of the block to be sent, in a byte array.
+     */
+    public byte[] toBytes() {
         byte[] serNum = Utils.intToBytes(this.serial_number, 4);
         byte[] walletArray = Utils.intToBytes(this.wallet, 4);
         return Utils.concat(serNum, walletArray, prev_sig, puzzle, sig);

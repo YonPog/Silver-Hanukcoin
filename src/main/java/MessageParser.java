@@ -27,14 +27,17 @@ public class MessageParser {
         return new Message(cmd, nodes, blocks);
     }
 
-    private ArrayList<Block> parseBlocks() throws Exception{
+    /**
+     * @return An ArrayList representing every block in the blockchain according to the message.
+     */
+    private ArrayList<Block> parseBlocks() throws Exception {
         int a = this.stream.readInt();
         if (a != DEADDEAD) {
-            throw new Exception ("No DeadDead found!");
+            throw new Exception("No DeadDead found!");
         }
         int blocksCount = this.stream.readInt();
         ArrayList<Block> blocks = new ArrayList<>();
-        while (blocks.size() < blocksCount){
+        while (blocks.size() < blocksCount) {
             Block block = this.parseBlock();
             blocks.add(block);
         }
@@ -42,6 +45,9 @@ public class MessageParser {
         return blocks;
     }
 
+    /**
+     * @return The block represented in this.stream.
+     */
     private Block parseBlock() throws IOException {
         int serNum = this.stream.readInt();
         int wallet = this.stream.readInt();
