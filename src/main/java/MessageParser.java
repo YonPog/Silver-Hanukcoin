@@ -6,6 +6,7 @@ import java.util.Arrays;
 public class MessageParser {
 
     private final DataInputStream stream;
+
     private static final int BEEFBEEF = 0xBeefBeef;
     private static final int DEADDEAD = 0xDeadDead;
 
