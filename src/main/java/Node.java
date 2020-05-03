@@ -46,7 +46,10 @@ public class Node {
         this.last_seen_ts = last_seen_ts;
     }
 
-    public byte[] toBytes(){
+    /**
+     * @return The byte representation of the node to be sent, in a byte array.
+     */
+    public byte[] toBytes() {
         byte[] name = this.name.getBytes();
         byte[] host = this.host.getBytes();
         byte[] port = Utils.intToBytes(this.port, 2);

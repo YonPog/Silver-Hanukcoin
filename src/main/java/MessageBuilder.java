@@ -3,12 +3,13 @@ import java.util.ArrayList;
 public class MessageBuilder {
     private int cmd;
     private ArrayList<Node> nodes;
-    private int blocks_count = 0; // 0 just for this stage
+    private ArrayList<Block> blocks;
 
-    public MessageBuilder(int cmd, ArrayList<Node> nodes, int blocks_count) {
+
+    public MessageBuilder(int cmd, ArrayList<Node> nodes, ArrayList<Block> blocks) {
         this.cmd = cmd;
         this.nodes = nodes;
-        this.blocks_count = blocks_count;
+        this.blocks = blocks;
     }
 
     public int getCmd() {
@@ -28,14 +29,14 @@ public class MessageBuilder {
     }
 
     public int getBlocks_count() {
-        return blocks_count;
-    }
-
-    public void setBlocks_count(int blocks_count) {
-        this.blocks_count = blocks_count;
+        return blocks.size();
     }
 
     public int getNodes_count(){
         return nodes.size();
     }
+
+    public ArrayList<Block> getBlocks(){ return this.blocks; }
+
+    public void setBlocks(ArrayList<Block> blocks){ this.blocks = blocks; }
 }
