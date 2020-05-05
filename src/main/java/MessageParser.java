@@ -1,7 +1,6 @@
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class MessageParser {
 
@@ -52,13 +51,13 @@ public class MessageParser {
         int serNum = this.stream.readInt();
         int wallet = this.stream.readInt();
         byte[] prevSig = new byte[8];
-        this.stream.read(prevSig);
+        this.stream.readFully(prevSig);
 
         byte[] puzzle = new byte[8];
-        this.stream.read(puzzle);
+        this.stream.readFully(puzzle);
 
         byte[] sig = new byte[12];
-        this.stream.read(sig);
+        this.stream.readFully(sig);
 
         return new Block(serNum, wallet, prevSig, puzzle, sig);
     }
@@ -85,19 +84,19 @@ public class MessageParser {
         // Node starts with the length of the name
         int nameLen = this.stream.readUnsignedByte();
         byte[] nameBytes = new byte[nameLen];
-        this.stream.read(nameBytes);
+        this.stream.readFully(nameBytes);
         String name = new String(nameBytes);
 
         // After the name length and name there is the host name length.
         int host_len = this.stream.readUnsignedByte();
         byte[] hostBytes = new byte[host_len];
-        this.stream.read(hostBytes);
+        this.stream.readFully(hostBytes);
         String host = new String(hostBytes);
 
 
         // After the host name length and name there is the port number.
         byte[] portBinary = new byte[2];
-        this.stream.read(portBinary);
+        this.stream.readFully(portBinary);
         int port = Utils.bytesToInt(portBinary); //two byte int
 
         // Port is 2 bytes, after them there are 4 bytes of the timestamp.
