@@ -8,6 +8,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.AbstractQueue;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -31,6 +32,8 @@ public class Server {
     public void startServer() {
 
         ConcurrentLinkedQueue<Pair<Node, Integer>> sendQueue = new ConcurrentLinkedQueue<>();
+        // last time a request to 3 nodes was sent
+        int lastChange = (int) (System.currentTimeMillis() / 1000);
 
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
@@ -69,13 +72,13 @@ public class Server {
                     Socket socket = sock.socket();
                     Message message = new Connection(socket).receive();
                     // update the blockchain
-                    chain.update(message.getBlocks());
+                    chain.update(message.getBlocks()); // TODO: 0 - no change, 1 - newsize > size, 2 - sizes are same but chain changed
                     // update nodes if necessary
                     for (Node n : message.getNodes()) {
                         Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
                         if (nodes.get(addr) == null) {
                             nodes.put(addr, n);
-                            nodes.get(addr).setNew(true); // set new node to "new" status
+                            nodes.get(addr).setNew(true); // set the new node to "new" status
                         } else {
                             if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
                                 nodes.replace(addr, n);
@@ -138,7 +141,7 @@ public class Server {
 
         while (true) {
             try {
-                Thread.sleep(300000);
+                Thread.sleep(300000); // 5 minutes
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -152,5 +155,11 @@ public class Server {
             }
         }
 
+    }
+
+    public ArrayList<Node> chooseNodes(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
+        Random random = new Random();
+        return null;
+        // TODO - choose 3 nodes from the map and return them as arraylist.
     }
 }
