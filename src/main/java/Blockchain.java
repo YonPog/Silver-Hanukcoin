@@ -26,19 +26,13 @@ public class Blockchain {
     }
 
     public static void saveToDB(ArrayList<Block> newBlockcahin) {
-        int commonBlockIndex = getlatestCommonBlock(newBlockcahin);
-        for (int i = commonBlockIndex; i < newBlockcahin.size(); i++) {
+        for (int i = blockchain.size() ; i < newBlockcahin.size() ; ++i) {
             collection.findOneAndUpdate(newBlockcahin.get(i).toDocment(), newBlockcahin.get(i).toDocment());
         }
     }
 
     private static int getlatestCommonBlock(ArrayList<Block> newBlockcahin) {
-        for (int i = 0; i < blockchain.size(); i++) {
-            if (!newBlockcahin.get(i).equals(blockchain.get(i))) {
-                return (i-1) > 0 ? i-1 : 0;
-            }
-        }
-        return -1;
+        return newBlockcahin.size() - blockchain.size() - 1;
     }
 
     public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
@@ -68,7 +62,9 @@ public class Blockchain {
 
     public static boolean isChainValid(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
         //first, check the new chain is longer.
-        if (newBlockcahin.size() <= blockchain.size()) { return false; }
+        if (newBlockcahin.size() <= blockchain.size()) {
+            return false;
+        }
         //check that the chains match up
         if (blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1)) ) {
             return false;
