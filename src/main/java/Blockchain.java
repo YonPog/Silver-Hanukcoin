@@ -18,11 +18,6 @@ public class Blockchain {
         MongoClient mongoClient = MongoClients.create("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
         MongoDatabase database = mongoClient.getDatabase("Blockchain");
         collection = database.getCollection("blockchain");
-
-//        byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
-//        byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
-//
-//        blockchain.add(new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig));
     }
 
     public static void loadFromDB() {
@@ -31,7 +26,7 @@ public class Blockchain {
 
     public static void saveToDB(ArrayList<Block> newBlockcahin) {
         int commonBlockIndex = getlatestCommonBlock(newBlockcahin);
-        for (int i = commonBlockIndex; i < blockchain.size(); i++) {
+        for (int i = commonBlockIndex; i < newBlockcahin.size(); i++) {
             collection.findOneAndUpdate(newBlockcahin.get(i).toDocment(), newBlockcahin.get(i).toDocment());
         }
     }
