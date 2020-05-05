@@ -1,4 +1,7 @@
 import java.util.Arrays;
+import com.mongodb.BasicDBObjectBuilder;
+import com.mongodb.DBObject;
+import org.bson.Document;
 
 public class Block {
     private int serial_number;
@@ -78,4 +81,17 @@ public class Block {
     public void setSig(byte[] sig) {
         this.sig = sig;
     }
+
+    public int calcNZ() {
+        return (int) (21 + Math.floor(Utils.log(2, this.serial_number)));
+    }
+
+    public Document toDocment() {
+        return new Document("serial_number", this.getSerial_number())
+                .append("wallet", this.getWallet())
+                .append("prev_sig", this.getPrev_sig())
+                .append("puzzle", this.getPuzzle())
+                .append("sig", this.getSig());
+    }
+
 }
