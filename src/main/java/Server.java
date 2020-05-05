@@ -23,7 +23,9 @@ public class Server {
         this.chain = chain;
         this.nodes = new ConcurrentHashMap<>(); // TODO: read the chain from the database
         // Add yourself
-        nodes.put(new Pair<>(host, port), new Node("Silver", HOST, PORT, (int) (System.currentTimeMillis() / 1000)));
+        Node self = new Node("Silver", HOST, PORT, (int) (System.currentTimeMillis() / 1000));
+        self.setNew(false);
+        nodes.put(new Pair<>(host, port), self);
     }
 
     public void startServer() {
@@ -73,9 +75,13 @@ public class Server {
                         Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
                         if (nodes.get(addr) == null) {
                             nodes.put(addr, n);
+                            nodes.get(addr).setNew(true); // set new node to "new" status
                         } else {
                             if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
                                 nodes.replace(addr, n);
+                            }
+                            if (message.getCmd() == 2) {
+                                nodes.get(addr).setNew(false); // got response from him, now he is legit
                             }
                         }
                     }
@@ -84,6 +90,12 @@ public class Server {
                         sendQueue.add(new Pair<>(nodes.get(new Pair<>(socket.getInetAddress().toString(),
                                 socket.getPort())), 2));
                     }
+                    try {
+                        sock.close();
+                    } catch (IOException e) {
+                        System.out.println("[!] ERROR closing socket, for some stupid reason Java wanted me to catch that exception :(");
+                    }
+
                 }
             }
 
@@ -103,7 +115,13 @@ public class Server {
                         Node node = pair.getKey();
                         try {
                             Socket sock = new Socket(node.getHost(), node.getPort());
-                            ArrayList<Node> nodesList = new ArrayList<>(nodes.values());
+                            ArrayList<Node> nodesList = new ArrayList<>();
+                            // send only the ones that aren't new
+                            for (Node n : nodes.values()) {
+                                if (!n.isNew()) {
+                                    nodesList.add(n);
+                                }
+                            }
                             ArrayList<Block> blocksList = chain.getBlocks();
                             new Connection(sock).send(new Message(pair.getValue(), nodesList, blocksList));
                             sock.close();
@@ -115,7 +133,24 @@ public class Server {
             }
         }
 
-        // TODO: Add another thread that goes over the nodes and adds to the send queue, deletes or changes "new" status
+        new ServerThread().start();
+        new SenderThread().start();
+
+        while (true) {
+            try {
+                Thread.sleep(300000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            // delete every node that wasn't seen in the last 30 minutes
+            for (Pair<String, Integer> pair : nodes.keySet()) {
+                if (nodes.get(pair).getLast_seen_ts() + 1800 < (int) (System.currentTimeMillis() / 1000)) {
+                    nodes.remove(pair);
+                }
+
+            }
+        }
 
     }
 }
