@@ -37,7 +37,8 @@ public class Server {
         // last time a request to 3 nodes was sent
         final int[] lastChange = {getCurrentTime()}; // array because Java wanted so (for it to be final)
         //send first messsages
-        sendQueue.add(new Pair<>(nodes.get(new Pair<>("35.246.17.73", 8080)), 1));
+        Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentTime());
+        sendQueue.add(new Pair<>(franji, 1));
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
 
@@ -59,6 +60,7 @@ public class Server {
                     try {
                         connSocket = serverSock.accept();
                         if (connSocket != null) {
+                            System.out.println("------ new connection ------");
                             new ConnectionHandler(connSocket).start();
                         }
                     } catch (IOException e) {
@@ -83,6 +85,7 @@ public class Server {
                     Message message = null;
                     try {
                         message = new Connection(socket).receive();
+
                     } catch (Exception e) {
                         System.out.println("[!] ERROR receiving connection");
                         return;
@@ -97,16 +100,19 @@ public class Server {
                     }
                     if (statusCode != 0) { // blockchain changed
                         lastChange[0] = getCurrentTime();
-                        addNodesToSend(nodes, sendQueue);
+                        addNodesToSend(nodes, sendQueue, 1);
                     }
 
                     //update status of sender node in hashmap
-                    Pair<String, Integer> sender = new Pair<>(socket.getInetAddress().toString(), socket.getPort());
+                    //assume first node is sender TODO
+                    Pair<String, Integer> sender = new Pair<>(message.getNodes().get(0).getHost(), message.getNodes().get(0).getPort());
+                    System.out.println(sender.toString());
                     if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
                         nodes.get(sender).setNew(false); // got response from him, now he is legit
                     }
                     // update nodes if necessary
                     boolean changed = false;
+
                     for (Node n : message.getNodes()) {
                         Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
                         if (nodes.get(addr) == null) {
@@ -119,13 +125,15 @@ public class Server {
                             }
                         }
                     }
-                    if (changed) {
-                        lastChange[0] = getCurrentTime();
-                        addNodesToSend(nodes, sendQueue); //TODO fix double updating
-                    }
+//                    if (changed) {
+//                        lastChange[0] = getCurrentTime();
+//                        addNodesToSend(nodes, sendQueue, 1); //TODO fix double updating
+//                    }
                     // if we need to respond
                     if (message.getCmd() == 1) {
+                        System.out.println("going to respond to the next message");
                         sendQueue.add(new Pair<>(nodes.get(sender), 2));
+                        System.out.println(nodes.get(sender).toString());
                     }
                     try {
                         sock.close();
@@ -183,7 +191,7 @@ public class Server {
 
             if (lastChange[0] + 300 < getCurrentTime()) { // if no change in the last 5 minutes
                 lastChange[0] = getCurrentTime();
-                addNodesToSend(nodes, sendQueue);
+                addNodesToSend(nodes, sendQueue, 1);
             }
 
             // delete every node that wasn't seen in the last 30 minutes
@@ -222,10 +230,10 @@ public class Server {
     }
 
     public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
-                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue) { //map is the node map, queue is sendqueue
+                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue, int cmd) { //map is the node map, queue is sendqueue
         ArrayList<Node> toAdd = chooseNodes(map);
         for (Node n : toAdd) {
-            queue.add(new Pair<>(n, 1));
+            queue.add(new Pair<>(n, cmd));
         }
     }
 
