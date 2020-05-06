@@ -16,13 +16,10 @@ public class Main {
 
         Blockchain.init();
         new Server(new Blockchain(), "85.65.31.137", 25565).startServer();
-        byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
-        byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
+        //  byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
+        //  byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
         //
-        //Block genesis = new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig);
-        //ArrayList<Block> list = new ArrayList<>();
-        //list.add(genesis);
-        //Blockchain.update(list);
+        //  blockchain.add(new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig));
         // Now update with genesis...!
 
         System.out.println("Done!");
