@@ -1,17 +1,23 @@
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 
 public class Connection {
-    public Connection(Socket connSocket) {
+    private Socket socket;
+
+    public Connection(Socket socket){
+        this.socket = socket;
     }
 
-    public void send(Message m) {
+    public void send(Message msg) throws IOException {
+        DataOutputStream dOut = new DataOutputStream(socket.getOutputStream());
+        dOut.write(msg.toBytes());
     }
 
-    public Message receive() {
-        return null;
-    }
-
-    public void validate() {
+    public Message receive() throws Exception {
+        DataInputStream stream = new DataInputStream(socket.getInputStream());
+        return new MessageParser(stream).toMessage();
     }
 }

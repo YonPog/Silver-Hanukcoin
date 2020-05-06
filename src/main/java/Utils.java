@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Utils {
@@ -57,4 +58,22 @@ public class Utils {
         }
         return merged;
     }
+
+    public static double log(double base, double logNumber) {
+        return Math.log(logNumber) / Math.log(base);
+    }
+
+    public static byte[] parseByteStr(String s) {
+        ArrayList<Byte> a = new ArrayList<Byte>();
+        for (String hex : s.split("\\s+")) {
+            byte b = (byte) Integer.parseInt(hex, 16);
+            a.add(b);
+        }
+        byte[] result = new byte[a.size()];
+        for(int i = 0; i < a.size(); i++) {
+            result[i] = a.get(i);
+        }
+        return result;
+    }
+
 }
