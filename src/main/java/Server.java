@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,9 +75,21 @@ public class Server {
 
                 public void run() {
                     Socket socket = sock.socket();
-                    Message message = new Connection(socket).receive();
+                    Message message = null;
+                    try {
+                        message = new Connection(socket).receive();
+                    } catch (Exception e) {
+                        System.out.println("[!] ERROR receiving connection");
+                        return;
+                    }
                     // update the blockchain
-                    int statusCode = chain.update(message.getBlocks());
+                    int statusCode = 0;
+                    try {
+                        statusCode = chain.update(message.getBlocks());
+                    } catch (NoSuchAlgorithmException e) {
+                        System.out.println("[!] ERROR - no such algorithm!");
+                        return;
+                    }
                     if (statusCode != 0) { // blockchain changed
                         lastChange[0] = getCurrentTime();
                         addNodesToSend(nodes, sendQueue);
