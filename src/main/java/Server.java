@@ -1,12 +1,10 @@
 import javafx.util.Pair;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,7 +22,7 @@ public class Server {
         this.chain = chain;
         this.nodes = new ConcurrentHashMap<>(); // TODO: read the chain from the database
         // Add yourself
-        Node self = new Node("Silver", HOST, PORT, (int) (System.currentTimeMillis() / 1000));
+        Node self = new Node("Silver", HOST, PORT, getCurrentTime());
         self.setNew(false);
         nodes.put(new Pair<>(host, port), self);
     }
@@ -33,7 +31,7 @@ public class Server {
 
         ConcurrentLinkedQueue<Pair<Node, Integer>> sendQueue = new ConcurrentLinkedQueue<>();
         // last time a request to 3 nodes was sent
-        int lastChange = (int) (System.currentTimeMillis() / 1000);
+        final int[] lastChange = {getCurrentTime()}; // array because Java wanted so (for it to be final)
 
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
@@ -41,7 +39,7 @@ public class Server {
             @Override
             public void run() {
                 // open the listening socket
-                ServerSocketChannel serverSock = null;
+                ServerSocketChannel serverSock;
                 try {
                     serverSock = ServerSocketChannel.open();
                     serverSock.socket().bind(new InetSocketAddress(PORT));
@@ -52,11 +50,11 @@ public class Server {
 
                 // wait for connections
                 while (true) {
-                    SocketChannel connSocket = null;
+                    SocketChannel connSocket;
                     try {
                         connSocket = serverSock.accept();
                         if (connSocket != null) {
-                            new ConnectionHandler().start();
+                            new ConnectionHandler(connSocket).start();
                         }
                     } catch (IOException e) {
                         System.out.println("[!] ERROR accept:\n " + e.toString());
@@ -68,15 +66,27 @@ public class Server {
             class ConnectionHandler extends Thread {
                 // getting requests via Connection and handling accordingly
 
-                public void run(SocketChannel sock) {
+                private SocketChannel sock;
+
+                ConnectionHandler(SocketChannel s) {
+                    this.sock = s;
+                }
+
+                public void run() {
                     Socket socket = sock.socket();
                     Message message = new Connection(socket).receive();
                     // update the blockchain
-                    chain.update(message.getBlocks()); // TODO: 0 - no change, 1 - newsize > size, 2 - sizes are same but chain changed
+                    int statusCode = chain.update(message.getBlocks());
+                    if (statusCode != 0) { // blockchain changed
+                        lastChange[0] = getCurrentTime();
+                        addNodesToSend(nodes, sendQueue);
+                    }
                     // update nodes if necessary
+                    boolean changed = false;
                     for (Node n : message.getNodes()) {
                         Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
                         if (nodes.get(addr) == null) {
+                            changed = true;
                             nodes.put(addr, n);
                             nodes.get(addr).setNew(true); // set the new node to "new" status
                         } else {
@@ -87,6 +97,10 @@ public class Server {
                                 nodes.get(addr).setNew(false); // got response from him, now he is legit
                             }
                         }
+                    }
+                    if (changed) {
+                        lastChange[0] = getCurrentTime();
+                        addNodesToSend(nodes, sendQueue);
                     }
                     // if we need to respond
                     if (message.getCmd() == 1) {
@@ -141,14 +155,19 @@ public class Server {
 
         while (true) {
             try {
-                Thread.sleep(300000); // 5 minutes
+                Thread.sleep(60000); // 1 minute
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
+            if (lastChange[0] + 300000 < getCurrentTime()) { // if no change in the last 5 minutes
+                lastChange[0] = getCurrentTime();
+                addNodesToSend(nodes, sendQueue);
+            }
+
             // delete every node that wasn't seen in the last 30 minutes
             for (Pair<String, Integer> pair : nodes.keySet()) {
-                if (nodes.get(pair).getLast_seen_ts() + 1800 < (int) (System.currentTimeMillis() / 1000)) {
+                if (nodes.get(pair).getLast_seen_ts() + 1800 < getCurrentTime()) {
                     nodes.remove(pair);
                 }
 
@@ -159,7 +178,36 @@ public class Server {
 
     public ArrayList<Node> chooseNodes(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
         Random random = new Random();
-        return null;
-        // TODO - choose 3 nodes from the map and return them as arraylist.
+        ArrayList<Node> values = new ArrayList<>();
+        for (Pair<String, Integer> key : map.keySet()) {
+            if (!(key.getKey().equals(HOST) && key.getValue() == PORT)) { // to not choose ourselves
+                values.add(map.get(key));
+            }
+        }
+        int bound = values.size();
+        ArrayList<Integer> indexes = new ArrayList<>();
+        while (indexes.size() < Math.min(3, values.size())) {
+            int choice = random.nextInt(bound);
+            if (!indexes.contains(choice)) {
+                indexes.add(choice);
+            }
+        }
+        ArrayList<Node> ret = new ArrayList<>();
+        for (int index : indexes) {
+            ret.add(values.get(index));
+        }
+        return ret;
+    }
+
+    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
+                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue) {
+        ArrayList<Node> toAdd = chooseNodes(map);
+        for (Node n : toAdd) {
+            queue.add(new Pair<>(n, 1));
+        }
+    }
+
+    public int getCurrentTime() {
+        return (int) (System.currentTimeMillis() / 1000);
     }
 }
