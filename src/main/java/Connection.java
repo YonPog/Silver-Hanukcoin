@@ -13,11 +13,16 @@ public class Connection {
 
     public void send(Message msg) throws IOException {
         DataOutputStream dOut = new DataOutputStream(socket.getOutputStream());
+        System.out.println("------ sending new message ------");
+        System.out.println(msg.toString(true));
         dOut.write(msg.toBytes());
     }
 
     public Message receive() throws Exception {
         DataInputStream stream = new DataInputStream(socket.getInputStream());
-        return new MessageParser(stream).toMessage();
+        Message msg = new MessageParser(stream).toMessage();
+        System.out.println("------ got new message ------");
+        System.out.println(msg.toString(true));
+        return msg;
     }
 }

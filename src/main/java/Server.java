@@ -26,14 +26,18 @@ public class Server {
         Node self = new Node("Silver", HOST, PORT, getCurrentTime());
         self.setNew(false);
         nodes.put(new Pair<>(host, port), self);
+        //TODO temporary
+        Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentTime());
+        nodes.put(new Pair<>(franji.getHost(), franji.getPort()), franji);
     }
 
     public void startServer() {
 
-        ConcurrentLinkedQueue<Pair<Node, Integer>> sendQueue = new ConcurrentLinkedQueue<>();
+        ConcurrentLinkedQueue<Pair<Node, Integer>> sendQueue = new ConcurrentLinkedQueue<>(); // node:cmd
         // last time a request to 3 nodes was sent
         final int[] lastChange = {getCurrentTime()}; // array because Java wanted so (for it to be final)
-
+        //send first messsages
+        sendQueue.add(new Pair<>(nodes.get(new Pair<>("35.246.17.73", 8080)), 1));
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
 
@@ -73,6 +77,7 @@ public class Server {
                     this.sock = s;
                 }
 
+                @Override
                 public void run() {
                     Socket socket = sock.socket();
                     Message message = null;
@@ -94,6 +99,12 @@ public class Server {
                         lastChange[0] = getCurrentTime();
                         addNodesToSend(nodes, sendQueue);
                     }
+
+                    //update status of sender node in hashmap
+                    Pair<String, Integer> sender = new Pair<>(socket.getInetAddress().toString(), socket.getPort());
+                    if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
+                        nodes.get(sender).setNew(false); // got response from him, now he is legit
+                    }
                     // update nodes if necessary
                     boolean changed = false;
                     for (Node n : message.getNodes()) {
@@ -106,19 +117,15 @@ public class Server {
                             if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
                                 nodes.replace(addr, n);
                             }
-                            if (message.getCmd() == 2) {
-                                nodes.get(addr).setNew(false); // got response from him, now he is legit
-                            }
                         }
                     }
                     if (changed) {
                         lastChange[0] = getCurrentTime();
-                        addNodesToSend(nodes, sendQueue);
+                        addNodesToSend(nodes, sendQueue); //TODO fix double updating
                     }
                     // if we need to respond
                     if (message.getCmd() == 1) {
-                        sendQueue.add(new Pair<>(nodes.get(new Pair<>(socket.getInetAddress().toString(),
-                                socket.getPort())), 2));
+                        sendQueue.add(new Pair<>(nodes.get(sender), 2));
                     }
                     try {
                         sock.close();
@@ -138,7 +145,7 @@ public class Server {
             public void run() {
                 while (true) {
                     // update timestamp of ourselves
-                    nodes.get(new Pair<>(HOST, PORT)).setLast_seen_ts((int) (System.currentTimeMillis() / 1000));
+                    nodes.get(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentTime());
 
                     if (!sendQueue.isEmpty()) {
                         Pair<Node, Integer> pair = sendQueue.remove();
@@ -153,7 +160,7 @@ public class Server {
                                 }
                             }
                             ArrayList<Block> blocksList = chain.getBlocks();
-                            new Connection(sock).send(new Message(pair.getValue(), nodesList, blocksList));
+                            new Connection(sock).send(new Message(pair.getValue(), nodesList, blocksList)); //cmd
                             sock.close();
                         } catch (IOException e) {
                             System.out.println("[!] ERROR opening socket!");
@@ -163,6 +170,7 @@ public class Server {
             }
         }
 
+        //dont forget we're still inside runServer ;)
         new ServerThread().start();
         new SenderThread().start();
 
@@ -173,7 +181,7 @@ public class Server {
                 Thread.currentThread().interrupt();
             }
 
-            if (lastChange[0] + 300000 < getCurrentTime()) { // if no change in the last 5 minutes
+            if (lastChange[0] + 300 < getCurrentTime()) { // if no change in the last 5 minutes
                 lastChange[0] = getCurrentTime();
                 addNodesToSend(nodes, sendQueue);
             }
@@ -192,6 +200,7 @@ public class Server {
     public ArrayList<Node> chooseNodes(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
         Random random = new Random();
         ArrayList<Node> values = new ArrayList<>();
+        //TODO remove ourselves instead of removing everyone else (maybe removing and adding ourselves)
         for (Pair<String, Integer> key : map.keySet()) {
             if (!(key.getKey().equals(HOST) && key.getValue() == PORT)) { // to not choose ourselves
                 values.add(map.get(key));
@@ -213,7 +222,7 @@ public class Server {
     }
 
     public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
-                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue) {
+                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue) { //map is the node map, queue is sendqueue
         ArrayList<Node> toAdd = chooseNodes(map);
         for (Node n : toAdd) {
             queue.add(new Pair<>(n, 1));

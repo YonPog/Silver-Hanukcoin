@@ -1,4 +1,3 @@
-import com.mongodb.DBObject;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -8,10 +7,9 @@ import org.bson.Document;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class Blockchain {
-    private static ArrayList<Block> blockchain = new ArrayList<Block>();
+    private static ArrayList<Block> blockchain = new ArrayList<>();
     private static MongoCollection<Document> collection;
 
 
@@ -22,16 +20,16 @@ public class Blockchain {
     }
 
     public static void loadFromDB() {
-
+        //TODO
     }
 
     public static void saveToDB(ArrayList<Block> newBlockcahin) {
         for (int i = blockchain.size() ; i < newBlockcahin.size() ; ++i) {
-            collection.findOneAndUpdate(newBlockcahin.get(i).toDocment(), newBlockcahin.get(i).toDocment());
+            collection.findOneAndUpdate(newBlockcahin.get(i).toDocument(), newBlockcahin.get(i).toDocument());
         }
     }
 
-    private static int getlatestCommonBlock(ArrayList<Block> newBlockcahin) {
+    private static int getlatestCommonBlock(ArrayList<Block> newBlockcahin) { //TODO useless
         return newBlockcahin.size() - blockchain.size() - 1;
     }
 
@@ -66,7 +64,7 @@ public class Blockchain {
             return false;
         }
         //check that the chains match up
-        if (blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1)) ) {
+        if (blockchain.size() > 0 && (!blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1))) ) {
             return false;
         }
         //now validate the next blocks
@@ -90,7 +88,7 @@ public class Blockchain {
             }
 
             //check if puzzle is solved
-            int index = 15; //the length of the signature in bits
+            int index = 15; //iterating from end to start
             int numZerosToCheck = newBlock.calcNZ();
             while (numZerosToCheck >= 8) {
                 if (digest[index] != 0) {
@@ -102,9 +100,9 @@ public class Blockchain {
 
             //there are less than 8 bits to check
             if (numZerosToCheck > 0) { //there are bits left
-                if ((digest[index] & ((1 << numZerosToCheck) - 1)) != 0) {
+                if ((digest[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
                     return false;
-                } //mask
+                }
             }
         }
         return true;

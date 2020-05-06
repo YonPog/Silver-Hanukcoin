@@ -88,7 +88,7 @@ public class Block {
         return (int) (21 + Math.floor(Utils.log(2, this.serial_number)));
     }
 
-    public Document toDocment() {
+    public Document toDocument() {
         return new Document("serial_number", this.getSerial_number())
                 .append("wallet", this.getWallet())
                 .append("prev_sig", this.getPrev_sig())
@@ -99,8 +99,7 @@ public class Block {
     public byte[] calcSig() throws NoSuchAlgorithmException {
         byte[] serNum = Utils.intToBytes(this.serial_number, 4);
         byte[] walletArray = Utils.intToBytes(this.wallet, 4);
-        byte[] md5 = MessageDigest.getInstance("MD5").digest(Utils.concat(serNum, walletArray, prev_sig, puzzle));
-        return md5;
+        return MessageDigest.getInstance("MD5").digest(Utils.concat(serNum, walletArray, prev_sig, puzzle));
     }
 
     public Boolean equals(Block other){
