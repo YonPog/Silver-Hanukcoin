@@ -28,6 +28,7 @@ public class Server {
         nodes.put(new Pair<>(host, port), self);
         //TODO temporary
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentTime());
+        //Node franji = new Node("Copper", "copper-coin.3utilities.com", 42069, getCurrentTime());
         nodes.put(new Pair<>(franji.getHost(), franji.getPort()), franji);
     }
 
@@ -38,12 +39,14 @@ public class Server {
         final int[] lastChange = {getCurrentTime()}; // array because Java wanted so (for it to be final)
         //send first messsages
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentTime());
+        //Node franji = new Node("Copper", "copper-coin.3utilities.com", 42069, getCurrentTime());
         sendQueue.add(new Pair<>(franji, 1));
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
 
             @Override
             public void run() {
+                System.out.println("server running");
                 // open the listening socket
                 ServerSocketChannel serverSock;
                 try {
@@ -105,7 +108,7 @@ public class Server {
 
                     //update status of sender node in hashmap
                     //assume first node is sender TODO
-                    Pair<String, Integer> sender = new Pair<>(message.getNodes().get(0).getHost(), message.getNodes().get(0).getPort());
+                    Pair<String, Integer> sender = new Pair<>(sock.getRemoteAddress()., ); //there was an error here!
                     System.out.println(sender.toString());
                     if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
                         nodes.get(sender).setNew(false); // got response from him, now he is legit
