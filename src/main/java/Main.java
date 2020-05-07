@@ -11,9 +11,13 @@ public class Main {
         //  DataInputStream stream = new DataInputStream(socket.getInputStream());
         //  System.out.println(new MessageParser(stream).toMessage().toString(true));
 
+        String[] addr = args[0].split(":");
+        String host = addr[0];
+        int port = Integer.parseInt(addr[1]);
+
         Blockchain.init();
-        new Server(new Blockchain(), "85.65.31.137", 25565).startServer();
-        System.out.println("sad");
+        new Server(new Blockchain(), host, port).startServer();
+        System.out.println("[!] something horrible happened and main loop of the server returned");
 
     }
 }

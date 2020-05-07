@@ -63,6 +63,10 @@ public class Utils {
         return Math.log(logNumber) / Math.log(base);
     }
 
+    /**
+     * @param s A byte string of format like "AB CD EF 0A 6D"
+     * @return The corresponding byte array
+     */
     public static byte[] parseByteStr(String s) {
         ArrayList<Byte> a = new ArrayList<Byte>();
         for (String hex : s.split("\\s+")) {
@@ -70,7 +74,7 @@ public class Utils {
             a.add(b);
         }
         byte[] result = new byte[a.size()];
-        for(int i = 0; i < a.size(); i++) {
+        for (int i = 0; i < a.size(); i++) {
             result[i] = a.get(i);
         }
         return result;

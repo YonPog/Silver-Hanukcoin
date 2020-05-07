@@ -27,7 +27,7 @@ public class Blockchain {
     }
 
     public static void loadFromDB() {
-        //TODO
+        // TODO
     }
 
     public static void saveToDB(ArrayList<Block> newBlockcahin) {
@@ -42,7 +42,7 @@ public class Blockchain {
 
     public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
         if (!isUpdateNeeded(newBlockcahin)) {
-            System.out.println("blockchain didn't change!");
+            System.out.println("[*] no change in the blockchain");
             return 0;
         }
 
