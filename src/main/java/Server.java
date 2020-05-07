@@ -3,7 +3,7 @@ import javafx.util.Pair;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
@@ -35,13 +35,13 @@ public class Server {
 
     public void startServer() {
 
-        ConcurrentLinkedQueue<Pair<Node, Integer>> sendQueue = new ConcurrentLinkedQueue<>(); // node:cmd
+        ConcurrentLinkedQueue<Node> sendQueue = new ConcurrentLinkedQueue<>(); // node:cmd
         // last time a request to 3 nodes was sent
         final int[] lastChange = {getCurrentTime()}; // array because Java wanted so (for it to be final)
         //send first messsages
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentTime());
         //Node franji = new Node("Copper", "copper-coin.3utilities.com", 42069, getCurrentTime());
-        sendQueue.add(new Pair<>(franji, 1));
+        sendQueue.add(franji);
         class ServerThread extends Thread {
             // waiting for connections, updating and adding to send queue
 
@@ -65,7 +65,7 @@ public class Server {
                         connSocket = serverSock.accept();
                         if (connSocket != null) {
                             System.out.println("------ new connection ------");
-                            new ConnectionHandler(connSocket).start();
+                            new RequestHandler(connSocket).start();
                         }
                     } catch (IOException e) {
                         System.out.println("[!] ERROR accept:\n " + e.toString());
@@ -74,71 +74,41 @@ public class Server {
                 }
             }
 
-            class ConnectionHandler extends Thread {
+            class RequestHandler extends Thread {
                 // getting requests via Connection and handling accordingly
 
                 private SocketChannel sock;
 
-                ConnectionHandler(SocketChannel s) {
+                RequestHandler(SocketChannel s) {
                     this.sock = s;
                 }
 
                 @Override
                 public void run() {
                     Socket socket = sock.socket();
-                    Message message = null;
+                    Message message;
+                    Connection conn = new Connection(socket);
                     try {
-                        message = new Connection(socket).receive();
+                        message = conn.receive();
+                        if (message.getCmd() == 2){ //shouldnt get here
+                            System.out.println("[!] ERROR RequestHandler got something im not supposed to see ;)");
+                        }
 
                     } catch (Exception e) {
                         System.out.println("[!] ERROR receiving connection");
                         System.out.println(e.toString());
                         return;
                     }
-                    // update the blockchain
-                    int statusCode = 0;
-                    try {
-                        statusCode = chain.update(message.getBlocks());
-                    } catch (NoSuchAlgorithmException e) {
-                        System.out.println("[!] ERROR - no such algorithm!");
-                        return;
-                    }
-                    if (statusCode != 0) { // blockchain changed
-                        lastChange[0] = getCurrentTime();
-                        addNodesToSend(nodes, sendQueue, 1);
-                    }
-
-                    //update status of sender node in hashmap
-                    Pair<String, Integer> sender = new Pair<>(socket.getInetAddress().toString(), socket.getPort()); //there was an error here!
-                    System.out.println(sender.toString());
-                    if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
-                        nodes.get(sender).setNew(false); // got response from him, now he is legit
-                    }
-                    // update nodes if necessary
-                    boolean changed = false;
-
-                    for (Node n : message.getNodes()) {
-                        Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
-                        if (nodes.get(addr) == null) {
-                            changed = true;
-                            nodes.put(addr, n);
-                            nodes.get(addr).setNew(true); // set the new node to "new" status
-                        } else {
-                            if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
-                                nodes.replace(addr, n);
-                            }
-                        }
-                    }
-//                    if (changed) {
-//                        lastChange[0] = getCurrentTime();
-//                        addNodesToSend(nodes, sendQueue, 1); //TODO fix double updating
-//                    }
+                    //update database
+                    updateDatabase(message, lastChange, sendQueue);
                     // if we need to respond
-                    if (message.getCmd() == 1) {
-                        System.out.println("going to respond to the next message");
-                        sendQueue.add(new Pair<>(nodes.get(sender), 2));
-                        System.out.println(nodes.get(sender).toString());
+                    System.out.println("going to respond to the this message");
+                    try {
+                        conn.send(buildMessage(2));
+                    } catch (IOException e) {
+                        System.out.format("[!] ERROR failed to respond to %s:%d\n", socket.getInetAddress().toString(), socket.getPort());
                     }
+
                     try {
                         sock.close();
                     } catch (IOException e) {
@@ -155,30 +125,64 @@ public class Server {
 
             @Override
             public void run() {
+                ArrayList<Pair<Connection, Node>> pending = new ArrayList<>();
                 while (true) {
                     // update timestamp of ourselves
                     nodes.get(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentTime());
-
-                    if (!sendQueue.isEmpty()) {
-                        Pair<Node, Integer> pair = sendQueue.remove();
-                        Node node = pair.getKey();
+                    //open new sockets for new messages
+                    if (!sendQueue.isEmpty()){
+                        Node target = sendQueue.remove();
                         try {
-                            Socket sock = new Socket(node.getHost(), node.getPort());
-                            ArrayList<Node> nodesList = new ArrayList<>();
-                            // send only the ones that aren't new
-                            for (Node n : nodes.values()) {
-                                if (!n.isNew()) {
-                                    nodesList.add(n);
-                                }
-                            }
-                            ArrayList<Block> blocksList = chain.getBlocks();
-                            new Connection(sock).send(new Message(pair.getValue(), nodesList, blocksList)); //cmd
-                            sock.close();
-                        } catch (IOException e) {
-                            System.out.println("[!] ERROR opening socket!");
-                            System.out.format("at: %s:%d\n", node.getHost(), node.getPort());
+                            Socket sock = new Socket(target.getHost(), target.getPort());
+                            //send the message
+                            Connection conn = new Connection(sock);
+                            conn.send(buildMessage(1));
+                            //add the socket to the pending arraylist
+                            pending.add(new Pair<>(conn, target));
+                        } catch (Exception e) {
+                            System.out.format("[!] ERROR sending message to %s:%d\n", target.getHost(), target.getPort());
+                            return;
                         }
                     }
+
+                    //now, check if there are any pending responses.
+                    for (Pair<Connection, Node> pair : pending){
+                        Connection conn = pair.getKey();
+                        Node target = pair.getValue();
+                        try {
+                            if (conn.getSocket().getInputStream().available() > 0){ //if new information not read
+                                Message msg = conn.receive();
+                                updateDatabase(msg, lastChange, sendQueue);
+                                nodes.get(new Pair<>(target.getHost(), target.getPort())).setNew(false); //update new status
+                                System.out.format("updated status to verified: %s", target.toString());
+
+                            }
+                        } catch (Exception e) {
+                            System.out.format("[!] ERROR receiving message to %s:%d\n", target.getHost(), target.getPort());
+                            return;
+                        }
+                    }
+
+//                    if (!sendQueue.isEmpty()) {
+//                        Pair<Node, Integer> pair = sendQueue.remove();
+//                        Node node = pair.getKey();
+//                        try {
+//                            Socket sock = new Socket(node.getHost(), node.getPort());
+//                            ArrayList<Node> nodesList = new ArrayList<>();
+//                            // send only the ones that aren't new
+//                            for (Node n : nodes.values()) {
+//                                if (!n.isNew()) {
+//                                    nodesList.add(n);
+//                                }
+//                            }
+//                            ArrayList<Block> blocksList = chain.getBlocks();
+//                            new Connection(sock).send(new Message(pair.getValue(), nodesList, blocksList)); //cmd
+//                            sock.close();
+//                        } catch (IOException e) {
+//                            System.out.println("[!] ERROR opening socket!");
+//                            System.out.format("at: %s:%d\n", node.getHost(), node.getPort());
+//                        }
+//                    }
                 }
             }
         }
@@ -201,7 +205,7 @@ public class Server {
             if (lastChange[0] + 300 < getCurrentTime()) { // if no change in the last 5 minutes
                 System.out.println("adding 3 random messages to send queue...");
                 lastChange[0] = getCurrentTime();
-                addNodesToSend(nodes, sendQueue, 1);
+                addNodesToSend(nodes, sendQueue);
             }
 
             // delete every node that wasn't seen in the last 30 minutes
@@ -239,12 +243,63 @@ public class Server {
         return ret;
     }
 
-    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
-                               ConcurrentLinkedQueue<Pair<Node, Integer>> queue, int cmd) { //map is the node map, queue is sendqueue
-        ArrayList<Node> toAdd = chooseNodes(map);
-        for (Node n : toAdd) {
-            queue.add(new Pair<>(n, cmd));
+    public Message buildMessage(int cmd){
+        //only sending verified nodes
+        ArrayList<Node> nodesToSend = new ArrayList<>();
+        for (Node n : nodes.values()){
+            if (!n.isNew()){
+                nodesToSend.add(n);
+            }
         }
+        //building the block list
+        ArrayList<Block> blocksList = chain.getBlocks();
+
+        return new Message(cmd, nodesToSend, blocksList);
+    }
+
+    public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) {
+        // update the blockchain
+        int statusCode;
+        try {
+            statusCode = Blockchain.update(message.getBlocks());
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("[!] ERROR - no such algorithm!");
+            return;
+        }
+
+        //update status of sender node in hashmap
+//        System.out.println(sender.toString());
+//        if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
+//            nodes.get(sender).setNew(false); // got response from him, now he is legit
+//        }
+        // update nodes if necessary
+        boolean changed = statusCode != 0; //check changes in blockchain
+        if (statusCode != 0){
+            System.out.println("sending message because blockchain changed");
+        }
+        for (Node n : message.getNodes()) { //check changes in nodes and update hashMap
+            Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
+            if (nodes.get(addr) == null) {
+                changed = true;
+                System.out.println("sending message because nodelist changed");
+                nodes.put(addr, n);
+                nodes.get(addr).setNew(true); // set the new node to "new" status
+            } else {
+                if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
+                    nodes.replace(addr, n);
+                }
+            }
+        }
+        if (changed) {
+            lastChange[0] = getCurrentTime();
+            addNodesToSend(nodes, sendQueue);
+        }
+    }
+
+    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
+                               ConcurrentLinkedQueue<Node> sendQueue) { //map is the node map, sendQueue is sendqueue
+        ArrayList<Node> toAdd = chooseNodes(map);
+        sendQueue.addAll(toAdd);
     }
 
     public int getCurrentTime() {

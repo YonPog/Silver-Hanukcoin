@@ -25,4 +25,8 @@ public class Connection {
         System.out.println(msg.toString(true));
         return msg;
     }
+
+    public Socket getSocket() {
+        return socket;
+    }
 }

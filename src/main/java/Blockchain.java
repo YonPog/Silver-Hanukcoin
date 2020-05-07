@@ -17,6 +17,13 @@ public class Blockchain {
         MongoClient mongoClient = MongoClients.create("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
         MongoDatabase database = mongoClient.getDatabase("Blockchain");
         collection = database.getCollection("blockchain");
+        //add genesis block!
+        byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
+        byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
+        // Now update with genesis...!
+        ArrayList<Block> genesis = new ArrayList<>();
+        genesis.add(new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig));
+        //Blockchain.saveToDB(genesis);
     }
 
     public static void loadFromDB() {
@@ -34,8 +41,8 @@ public class Blockchain {
     }
 
     public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
-        if (!isChainValid(newBlockcahin)) {
-            System.out.println("Received invalid blockchain!");
+        if (!isUpdateNeeded(newBlockcahin)) {
+            System.out.println("blockchain didn't change!");
             return 0;
         }
 
@@ -58,32 +65,37 @@ public class Blockchain {
         return blockchain;
     }
 
-    public static boolean isChainValid(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
+    public static boolean isUpdateNeeded(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException {
         //if chain is empty, take the next one
-        if  (blockchain.size() == 0 || blockchain.size() == newBlockcahin.size()){
+        if (blockchain.size() == 0 && newBlockchain.size() > 0){
             return true;
         }
 
+        //to prevent errors
+        if (newBlockchain.size() == 0 || blockchain.size() == newBlockchain.size()){
+            return false;
+        }
+
         //first, check the new chain is longer.
-        if (newBlockcahin.size() <= blockchain.size()) {
+        if (newBlockchain.size() <= blockchain.size()) {
             return false;
         }
         //check that the chains match up
-        if (blockchain.size() > 0 && (!blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1))) ) {
+        if (!blockchain.get(blockchain.size() - 1).equals(newBlockchain.get(blockchain.size() - 1))) {
             return false;
         }
         //now validate the next blocks
-        for (int i = blockchain.size() ; i < newBlockcahin.size() ; ++i){
-            Block newBlock = newBlockcahin.get(i);
+        for (int i = blockchain.size() ; i < newBlockchain.size() ; ++i){
+            Block newBlock = newBlockchain.get(i);
             byte[] digest = newBlock.calcSig();
 
             //check if serial number is one more than previous one
-            if (newBlock.getSerial_number() != newBlockcahin.get(i-1).getSerial_number() + 1) {
+            if (newBlock.getSerial_number() != newBlockchain.get(i-1).getSerial_number() + 1) {
                 return false;
             }
 
             //check if wallet number is different than the last one
-            if (newBlock.getWallet() == newBlockcahin.get(i-1).getWallet()) {
+            if (newBlock.getWallet() == newBlockchain.get(i-1).getWallet()) {
                 return false;
             }
 

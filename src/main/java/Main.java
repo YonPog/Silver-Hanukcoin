@@ -1,9 +1,6 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Arrays;
+//TODO save nodelist to file
+//TODO save blockchain to file
+
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -16,13 +13,7 @@ public class Main {
 
         Blockchain.init();
         new Server(new Blockchain(), "85.65.31.137", 25565).startServer();
-        //  byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
-        //  byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
-        //
-        //  blockchain.add(new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig));
-        // Now update with genesis...!
-
-        System.out.println("Done!");
+        System.out.println("sad");
 
     }
 }
