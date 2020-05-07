@@ -3,6 +3,7 @@ import javafx.util.Pair;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
@@ -91,6 +92,7 @@ public class Server {
 
                     } catch (Exception e) {
                         System.out.println("[!] ERROR receiving connection");
+                        System.out.println(e.toString());
                         return;
                     }
                     // update the blockchain
@@ -107,7 +109,6 @@ public class Server {
                     }
 
                     //update status of sender node in hashmap
-                    //assume first node is sender TODO
                     Pair<String, Integer> sender = new Pair<>(socket.getInetAddress().toString(), socket.getPort()); //there was an error here!
                     System.out.println(sender.toString());
                     if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
@@ -175,6 +176,7 @@ public class Server {
                             sock.close();
                         } catch (IOException e) {
                             System.out.println("[!] ERROR opening socket!");
+                            System.out.format("at: %s:%d\n", node.getHost(), node.getPort());
                         }
                     }
                 }
@@ -188,11 +190,16 @@ public class Server {
         while (true) {
             try {
                 Thread.sleep(60000); // 1 minute
+                System.out.println("node list: ");
+                for (Node n : nodes.values()){
+                    System.out.println(n.toString());
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
             if (lastChange[0] + 300 < getCurrentTime()) { // if no change in the last 5 minutes
+                System.out.println("adding 3 random messages to send queue...");
                 lastChange[0] = getCurrentTime();
                 addNodesToSend(nodes, sendQueue, 1);
             }

@@ -13,7 +13,7 @@ public class Connection {
 
     public void send(Message msg) throws IOException {
         DataOutputStream dOut = new DataOutputStream(socket.getOutputStream());
-        System.out.format("------ sending new message to %s ------\n", socket.getInetAddress());
+        System.out.format("------ sending new message to %s:%d ------\n", socket.getInetAddress(), socket.getPort());
         System.out.println(msg.toString(true));
         dOut.write(msg.toBytes());
     }
