@@ -12,15 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Server {
-    private Blockchain chain;
     private ConcurrentHashMap<Pair<String, Integer>, Node> nodes;
     private final String HOST;
     private final int PORT;
 
-    public Server(Blockchain chain, String host, int port) {
+    public Server(String host, int port) {
         this.HOST = host;
         this.PORT = port;
-        this.chain = chain; // TODO - read from database
+        // TODO - loadFromDB the blockchain
         this.nodes = new ConcurrentHashMap<>(); // TODO: read the nodes from the database
 
         // Add this host (ourselves)
@@ -276,7 +275,7 @@ public class Server {
             }
         }
         // retrieving the block list
-        ArrayList<Block> blocksList = chain.getBlocks();
+        ArrayList<Block> blocksList = Blockchain.getBlocks();
 
         return new Message(cmd, nodesToSend, blocksList);
     }

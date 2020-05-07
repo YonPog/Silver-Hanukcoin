@@ -61,7 +61,7 @@ public class Blockchain {
         return 2;
     }
 
-    public ArrayList<Block> getBlocks() {
+    public static ArrayList<Block> getBlocks() {
         return blockchain;
     }
 

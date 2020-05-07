@@ -16,7 +16,7 @@ public class Main {
         int port = Integer.parseInt(addr[1]);
 
         Blockchain.init();
-        new Server(new Blockchain(), host, port).startServer();
+        new Server(host, port).startServer();
         System.out.println("[!] something horrible happened and main loop of the server returned");
 
     }
