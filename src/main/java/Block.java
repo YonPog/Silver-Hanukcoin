@@ -1,3 +1,5 @@
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -88,14 +90,6 @@ public class Block {
         return (int) (21 + Math.floor(Utils.log(2, this.serial_number)));
     }
 
-    public Document toDocument() {
-        return new Document("serial_number", this.getSerial_number())
-                .append("wallet", this.getWallet())
-                .append("prev_sig", this.getPrev_sig())
-                .append("puzzle", this.getPuzzle())
-                .append("sig", this.getSig());
-    }
-
     public byte[] calcSig() throws NoSuchAlgorithmException {
         byte[] serNum = Utils.intToBytes(this.serial_number, 4);
         byte[] walletArray = Utils.intToBytes(this.wallet, 4);
@@ -108,6 +102,24 @@ public class Block {
                 Arrays.equals(this.prev_sig, other.prev_sig) &&
                 Arrays.equals(this.puzzle, other.puzzle) &&
                 Arrays.equals(this.sig, other.sig);
+    }
+
+    /**
+     * @return The block represented in this.stream.
+     */
+    public static Block parseBlock(DataInputStream stream) throws IOException {
+        int serNum = stream.readInt();
+        int wallet = stream.readInt();
+        byte[] prevSig = new byte[8];
+        stream.readFully(prevSig);
+
+        byte[] puzzle = new byte[8];
+        stream.readFully(puzzle);
+
+        byte[] sig = new byte[12];
+        stream.readFully(sig);
+
+        return new Block(serNum, wallet, prevSig, puzzle, sig);
     }
 
 

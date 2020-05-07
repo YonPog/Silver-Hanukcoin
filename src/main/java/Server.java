@@ -12,25 +12,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Server {
-    private Blockchain chain;
-    private ConcurrentHashMap<Pair<String, Integer>, Node> nodes;
     private final String HOST;
     private final int PORT;
 
-    public Server(Blockchain chain, String host, int port) {
+    public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
-        this.chain = chain; // TODO - read from database
-        this.nodes = new ConcurrentHashMap<>(); // TODO: read the nodes from the database
 
         // Add this host (ourselves)
         Node self = new Node("Silver", HOST, PORT, getCurrentEpoch());
         self.setNew(false);
-        nodes.put(new Pair<>(host, port), self);
+        Database.setNode(new Pair<>(host, port), self);
 
         // TODO temporary - will be fixed after reading from database
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
-        nodes.put(new Pair<>(franji.getHost(), franji.getPort()), franji);
+        Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
         System.out.format("[*] Successfully initialized server on %s:%d", HOST, PORT);
     }
 
@@ -114,7 +110,11 @@ public class Server {
                     }
                     // update database and variables according to the new information
                     // and adding to sendQueue if something changed
-                    updateDatabase(message, lastChange, sendQueue);
+                    try {
+                        updateDatabase(message, lastChange, sendQueue);
+                    } catch (IOException e) {
+                        System.out.println("[!] ERROR writing node change");
+                    }
                     // starting to create response
                     System.out.println("[*] creating the response for this message");
                     try {
@@ -151,7 +151,7 @@ public class Server {
 
                 while (true) {
                     // update timestamp of ourselves
-                    nodes.get(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentEpoch());
+                    Database.getNode(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentEpoch());
                     // open new sockets for new messages
                     if (!sendQueue.isEmpty()) { // there is someone we need to send a message to
                         Node target = sendQueue.remove(); // retrieves the head of the queue and deletes it
@@ -183,7 +183,7 @@ public class Server {
                                 // and adding to sendQueue if something changed
                                 updateDatabase(msg, lastChange, sendQueue);
                                 // update new status, because the node responded to us
-                                nodes.get(new Pair<>(target.getHost(), target.getPort())).setNew(false);
+                                Database.getNode(new Pair<>(target.getHost(), target.getPort())).setNew(false);
                                 System.out.format("[*] updated status to verified: %s", target.toString());
 
                             }
@@ -212,7 +212,7 @@ public class Server {
             }
 
             System.out.println("[*] node list: ");
-            for (Node n : nodes.values()) {
+            for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
 
@@ -220,13 +220,13 @@ public class Server {
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");
                 lastChange[0] = getCurrentEpoch();
                 // add 3 random nodes from the HashMap
-                addNodesToSend(nodes, sendQueue);
+                addNodesToSend(Database.getNodes(), sendQueue);
             }
 
             // delete every node that wasn't seen in the last 30 minutes
-            for (Pair<String, Integer> pair : nodes.keySet()) {
-                if (nodes.get(pair).getLast_seen_ts() + 1800 < getCurrentEpoch()) {
-                    nodes.remove(pair);
+            for (Pair<String, Integer> pair : Database.getNodes().keySet()) {
+                if (Database.getNode(pair).getLast_seen_ts() + 1800 < getCurrentEpoch()) {
+                    Database.getNodes().remove(pair);
                 }
 
             }
@@ -270,13 +270,13 @@ public class Server {
     public Message buildMessage(int cmd) {
         // only sending verified nodes
         ArrayList<Node> nodesToSend = new ArrayList<>();
-        for (Node n : nodes.values()) {
+        for (Node n : Database.getNodes().values()) {
             if (!n.isNew()) {
                 nodesToSend.add(n);
             }
         }
         // retrieving the block list
-        ArrayList<Block> blocksList = chain.getBlocks();
+        ArrayList<Block> blocksList = Database.getBlocks();
 
         return new Message(cmd, nodesToSend, blocksList);
     }
@@ -286,12 +286,12 @@ public class Server {
      * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
      * @param sendQueue  The queue to add 3 nodes to send a message to if needed
      */
-    public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) {
+    public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
         // update the blockchain
         int statusCode;
         try {
-            statusCode = Blockchain.update(message.getBlocks());
-        } catch (NoSuchAlgorithmException e) {
+            statusCode = Database.update(message.getBlocks());
+        } catch (NoSuchAlgorithmException | IOException e) {
             System.out.format("[!] ERROR unrecognized algorithm.\nDetails:\n%s", e.toString());
             return;
         }
@@ -305,22 +305,22 @@ public class Server {
         for (Node n : message.getNodes()) {
             // the key to the HashMap entry
             Pair<String, Integer> addr = new Pair<>(n.getHost(), n.getPort());
-            if (nodes.get(addr) == null) { // node not in the HashMap
+            if (Database.getNode(addr) == null) { // node not in the HashMap
                 changed = true;
                 System.out.println("[*] sending message because the nodes list changed");
-                nodes.put(addr, n);
-                nodes.get(addr).setNew(true); // set the new node to "new" status
+                Database.setNode(addr, n);
+                Database.getNode(addr).setNew(true); // set the new node to "new" status
             } else {
                 // node was in out HashMap
-                if (n.getLast_seen_ts() > nodes.get(addr).getLast_seen_ts()) {
+                if (n.getLast_seen_ts() > Database.getNodes().get(addr).getLast_seen_ts()) {
                     // set the timestamp to the maximum one
-                    nodes.replace(addr, n);
+                    Database.getNodes().replace(addr, n);
                 }
             }
         }
         if (changed) {
             lastChange[0] = getCurrentEpoch();
-            addNodesToSend(nodes, sendQueue);
+            addNodesToSend(Database.getNodes(), sendQueue);
         }
     }
 

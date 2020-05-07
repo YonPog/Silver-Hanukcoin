@@ -37,30 +37,13 @@ public class MessageParser {
         int blocksCount = this.stream.readInt();
         ArrayList<Block> blocks = new ArrayList<>();
         while (blocks.size() < blocksCount) {
-            Block block = this.parseBlock();
+            Block block = Block.parseBlock(stream);
             blocks.add(block);
         }
 
         return blocks;
     }
 
-    /**
-     * @return The block represented in this.stream.
-     */
-    private Block parseBlock() throws IOException {
-        int serNum = this.stream.readInt();
-        int wallet = this.stream.readInt();
-        byte[] prevSig = new byte[8];
-        this.stream.readFully(prevSig);
-
-        byte[] puzzle = new byte[8];
-        this.stream.readFully(puzzle);
-
-        byte[] sig = new byte[12];
-        this.stream.readFully(sig);
-
-        return new Block(serNum, wallet, prevSig, puzzle, sig);
-    }
 
     /**
      * @return An ArrayList representing every node in the network according to the message.

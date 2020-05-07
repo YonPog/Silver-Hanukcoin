@@ -1,46 +1,72 @@
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import org.bson.Document;
+import javafx.util.Pair;
 
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class Blockchain {
+public class Database {
     private static ArrayList<Block> blockchain = new ArrayList<>();
-    private static MongoCollection<Document> collection;
+    private static ConcurrentHashMap<Pair<String, Integer>, Node> nodes = new ConcurrentHashMap<>(); //host:port, node
+    private static int blocksInFile = 0;
+    private static final String NODES_FILE = "nodes.Silver";
+    private static final String BLOCKCHAIN_FILE = "blocks.Silver";
 
 
-    public static void init() {
-        MongoClient mongoClient = MongoClients.create("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
-        MongoDatabase database = mongoClient.getDatabase("Blockchain");
-        collection = database.getCollection("blockchain");
-        //add genesis block!
-        byte[] puzzle =  Utils.parseByteStr("71 16 8F 29  D9 FE DF F9");
-        byte[] sig = Utils.parseByteStr("BF 3D AE 1F  65 B0 8F 66 AB 2D B5 1E");
-        // Now update with genesis...!
-        ArrayList<Block> genesis = new ArrayList<>();
-        genesis.add(new Block(0, 0, "TEST_BLK".getBytes(), puzzle, sig));
-        //Blockchain.saveToDB(genesis);
+    public static void init() throws Exception {
+        loadNodelist();
+        loadBlockchain();
     }
 
-    public static void loadFromDB() {
-        // TODO
+    public static ConcurrentHashMap<Pair<String, Integer>, Node> getNodes(){
+        return nodes;
     }
 
-    public static void saveToDB(ArrayList<Block> newBlockcahin) {
-        for (int i = blockchain.size() ; i < newBlockcahin.size() ; ++i) {
-            collection.findOneAndUpdate(newBlockcahin.get(i).toDocument(), newBlockcahin.get(i).toDocument());
+    public static Node getNode(Pair<String, Integer> pair){
+        return nodes.get(pair);
+    }
+
+    public static void setNode(Pair<String, Integer> pair, Node n) throws IOException {
+        nodes.put(pair, n);
+        saveNodelist();
+    }
+
+    public static void loadNodelist() throws Exception {
+        DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));
+        ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
+        //fill up node list
+        for (Node n : nodeList){
+            n.setNew(false);
+            nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
+        }
+
+    }
+
+    public static void saveNodelist() throws IOException {
+        DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));
+        ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
+        Message msg = new Message(1, nodeList, new ArrayList<Block>());
+        stream.write(msg.toBytes());
+    }
+
+    public static void loadBlockchain() throws IOException {
+        DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
+        while (stream.available() > 0){
+            blockchain.add(Block.parseBlock(stream));
         }
     }
 
-    private static int getlatestCommonBlock(ArrayList<Block> newBlockcahin) { //TODO useless
-        return newBlockcahin.size() - blockchain.size() - 1;
+    public static void saveBlockchain(ArrayList<Block> newBlockcahin) throws IOException {
+        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
+        int oldBlocks = blocksInFile;
+        for (int i = oldBlocks ; i < blockchain.size() ; ++i){
+            writeStream.write(blockchain.get(i).toBytes());
+        }
+        blocksInFile = blockchain.size();
     }
 
-    public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
+    public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException, IOException {
         if (!isUpdateNeeded(newBlockcahin)) {
             System.out.println("[*] no change in the blockchain");
             return 0;
@@ -48,20 +74,14 @@ public class Blockchain {
 
         if (newBlockcahin.size() > blockchain.size()) {
             blockchain = newBlockcahin;
-            saveToDB(newBlockcahin);
+            saveBlockchain(newBlockcahin);
             return 1;
         }
-
-//        if (newBlockcahin.get(newBlockcahin.size() - 1).getPuzzle() is greater than blockchain.get(blockchain.size() - 1).getPuzzle()) {
-//            blockchain = newBlockcahin;
-//            saveToDB();
-//            return 2;
-//        }
 
         return 2;
     }
 
-    public ArrayList<Block> getBlocks() {
+    public static ArrayList<Block> getBlocks() {
         return blockchain;
     }
 
