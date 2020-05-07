@@ -13,7 +13,7 @@ public class Connection {
 
     public void send(Message msg) throws IOException {
         DataOutputStream dOut = new DataOutputStream(socket.getOutputStream());
-        System.out.println("------ sending new message ------");
+        System.out.format("------ sending new message to %s ------\n", socket.getInetAddress());
         System.out.println(msg.toString(true));
         dOut.write(msg.toBytes());
     }
@@ -21,7 +21,7 @@ public class Connection {
     public Message receive() throws Exception {
         DataInputStream stream = new DataInputStream(socket.getInputStream());
         Message msg = new MessageParser(stream).toMessage();
-        System.out.println("------ got new message ------");
+        System.out.format("------ got new message from %s:%d ------\n", socket.getInetAddress(), socket.getPort());
         System.out.println(msg.toString(true));
         return msg;
     }

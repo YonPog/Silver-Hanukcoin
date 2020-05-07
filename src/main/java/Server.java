@@ -108,7 +108,7 @@ public class Server {
 
                     //update status of sender node in hashmap
                     //assume first node is sender TODO
-                    Pair<String, Integer> sender = new Pair<>(sock.getRemoteAddress()., ); //there was an error here!
+                    Pair<String, Integer> sender = new Pair<>(socket.getInetAddress().toString(), socket.getPort()); //there was an error here!
                     System.out.println(sender.toString());
                     if (message.getCmd() == 2 && nodes.get(sender) != null && nodes.get(sender).isNew()) { //response
                         nodes.get(sender).setNew(false); // got response from him, now he is legit

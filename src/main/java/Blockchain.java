@@ -59,17 +59,17 @@ public class Blockchain {
     }
 
     public static boolean isChainValid(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException {
-        //temporary: if chain is empty, just take the new chain
-        if (blockchain.size() == 0 ){
+        //if chain is empty, take the next one
+        if  (blockchain.size() == 0 || blockchain.size() == newBlockcahin.size()){
             return true;
         }
 
         //first, check the new chain is longer.
         if (newBlockcahin.size() <= blockchain.size()) {
-            return true;
+            return false;
         }
         //check that the chains match up
-        if (!blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1)) ) {
+        if (blockchain.size() > 0 && (!blockchain.get(blockchain.size()-1).equals(newBlockcahin.get(blockchain.size() -1))) ) {
             return false;
         }
         //now validate the next blocks
