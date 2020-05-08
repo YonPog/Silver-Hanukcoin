@@ -40,7 +40,6 @@ public class Database {
         ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
         // fill up node list
         for (Node n : nodeList) {
-            n.setNew(false);
             nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
         }
 

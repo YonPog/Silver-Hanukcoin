@@ -314,6 +314,7 @@ public class Server {
                 // node was in out HashMap
                 if (n.getLast_seen_ts() > Database.getNodes().get(addr).getLast_seen_ts()) {
                     // set the timestamp to the maximum one
+                    n.setNew(Database.getNode(addr).isNew());
                     Database.getNodes().replace(addr, n);
                 }
             }
