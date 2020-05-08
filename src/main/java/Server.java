@@ -27,7 +27,7 @@ public class Server {
         // TODO temporary - will be fixed after reading from database
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
-        System.out.format("[*] Successfully initialized server on %s:%d", HOST, PORT);
+        System.out.format("[*] Successfully initialized server on %s:%d\n", HOST, PORT);
     }
 
     /**
@@ -62,7 +62,7 @@ public class Server {
                     return;
                 }
 
-                System.out.format("[*] Starting to listen to connections");
+                System.out.format("[*] Starting to listen to connections\n");
                 // wait for connections
                 while (true) {
                     SocketChannel connSocket;
@@ -105,7 +105,7 @@ public class Server {
                         }
 
                     } catch (Exception e) {
-                        System.out.format("[!] ERROR getting data from request. Details:\n%s", e.toString());
+                        System.out.format("[!] ERROR getting data from request. Details:\n%s\n", e.toString());
                         return;
                     }
                     // update database and variables according to the new information
@@ -121,7 +121,7 @@ public class Server {
                         // building the response based on the network state
                         conn.send(buildMessage(2));
                     } catch (IOException e) {
-                        System.out.format("[!] ERROR failed to respond to %s:%d\n.Details:\n %s",
+                        System.out.format("[!] ERROR failed to respond to %s:%d\n.Details:\n %s\n",
                                 socket.getInetAddress().toString(),
                                 socket.getPort(),
                                 e.toString());
@@ -130,7 +130,7 @@ public class Server {
                     try {
                         sock.close();
                     } catch (IOException e) {
-                        System.out.format("[!] ERROR closing socket, for some stupid reason Java wanted me to catch that exception :(\nDetails:\n%s",
+                        System.out.format("[!] ERROR closing socket, for some stupid reason Java wanted me to catch that exception :(\nDetails:\n%s\n",
                                 e.toString());
                     }
 
@@ -164,7 +164,7 @@ public class Server {
                             // add the socket to the pending arraylist
                             pending.add(new Pair<>(conn, target));
                         } catch (Exception e) {
-                            System.out.format("[!] ERROR sending message to %s:%d\nDetails:\n%s",
+                            System.out.format("[!] ERROR sending message to %s:%d\nDetails:\n%s\n",
                                     target.getHost(),
                                     target.getPort(),
                                     e.toString());

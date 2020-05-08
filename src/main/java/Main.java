@@ -17,8 +17,8 @@ public class Main {
         String host = addr[0];
         int port = Integer.parseInt(addr[1]);
         //TODO important: when running first time run those two lines to create the necessary files
-        //Database.saveBlockchain(new ArrayList<Block>());
-        //Database.saveNodelist();
+        //Database.saveBlockchain();
+        //Database.saveNodeList();
         Database.init();
         Server server = new Server(host, port);
         server.startServer();

@@ -14,36 +14,42 @@ public class Database {
     private static final String BLOCKCHAIN_FILE = "blocks.Silver";
 
 
+    /**
+     * Initializes the data with the saved nodes and blocks.
+     */
     public static void init() throws Exception {
-        loadNodelist();
+        loadNodeList();
         loadBlockchain();
     }
 
-    public static ConcurrentHashMap<Pair<String, Integer>, Node> getNodes(){
+    public static ConcurrentHashMap<Pair<String, Integer>, Node> getNodes() {
         return nodes;
     }
 
-    public static Node getNode(Pair<String, Integer> pair){
+    public static Node getNode(Pair<String, Integer> pair) {
         return nodes.get(pair);
     }
 
     public static void setNode(Pair<String, Integer> pair, Node n) throws IOException {
         nodes.put(pair, n);
-        saveNodelist();
+        saveNodeList();
     }
 
-    public static void loadNodelist() throws Exception {
+    public static void loadNodeList() throws Exception {
         DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));
         ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
-        //fill up node list
-        for (Node n : nodeList){
+        // fill up node list
+        for (Node n : nodeList) {
             n.setNew(false);
             nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
         }
 
     }
 
-    public static void saveNodelist() throws IOException {
+    /**
+     * Saves the nodes to the file.
+     */
+    public static void saveNodeList() throws IOException {
         DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));
         ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
         Message msg = new Message(1, nodeList, new ArrayList<Block>());
@@ -52,29 +58,32 @@ public class Database {
 
     public static void loadBlockchain() throws IOException {
         DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
-        while (stream.available() > 0){
+        while (stream.available() > 0) {
             blockchain.add(Block.parseBlock(stream));
         }
     }
 
-    public static void saveBlockchain(ArrayList<Block> newBlockcahin) throws IOException {
+    /**
+     * Saves the blocks to the file.
+     */
+    public static void saveBlockchain() throws IOException {
         DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
         int oldBlocks = blocksInFile;
-        for (int i = oldBlocks ; i < blockchain.size() ; ++i){
+        for (int i = oldBlocks; i < blockchain.size(); ++i) {
             writeStream.write(blockchain.get(i).toBytes());
         }
         blocksInFile = blockchain.size();
     }
 
-    public static int update(ArrayList<Block> newBlockcahin) throws NoSuchAlgorithmException, IOException {
-        if (!isUpdateNeeded(newBlockcahin)) {
+    public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {
+        if (!isUpdateNeeded(newBlockchain)) {
             System.out.println("[*] no change in the blockchain");
             return 0;
         }
 
-        if (newBlockcahin.size() > blockchain.size()) {
-            blockchain = newBlockcahin;
-            saveBlockchain(newBlockcahin);
+        if (newBlockchain.size() > blockchain.size()) {
+            blockchain = newBlockchain;
+            saveBlockchain();
             return 1;
         }
 
