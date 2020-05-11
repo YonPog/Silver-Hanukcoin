@@ -286,7 +286,8 @@ public class Server {
      * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
      * @param sendQueue  The queue to add 3 nodes to send a message to if needed
      */
-    public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
+    //TODO: fix synchronization issues.
+    synchronized public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
         // update the blockchain
         int statusCode;
         try {
