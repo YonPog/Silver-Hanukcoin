@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Miner extends Thread{
     private int maxThreads;
-    private ConcurrentLinkedQueue<Block> solutions;
-    private ArrayList<SolverThread> threads;
+    private ConcurrentLinkedQueue<Block> solutions = new ConcurrentLinkedQueue<>();
+    private ArrayList<SolverThread> threads = new ArrayList<>();
     private Block lastBlock;
     private Server server;
     public AtomicBoolean lastBlockIsOurs;
@@ -21,8 +21,9 @@ public class Miner extends Thread{
         this.server = server;
         lastBlock = Database.getLatestBlock(); //get the latest block
         this.maxThreads = maxThreads;
-        this.lastBlockIsOurs.set(false);
-        this.blockchainChanged.set(false);
+        this.lastBlockIsOurs = new AtomicBoolean(false);
+        this.blockchainChanged = new AtomicBoolean(false);
+        System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
         for (int i = 0 ; i < maxThreads ; ++i){
             SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
             st.start();
@@ -40,6 +41,7 @@ public class Miner extends Thread{
 
     private void refresh(){
         for (SolverThread t : threads){
+            System.out.println("killed " + t.toString());
             t.kill();
         }
         threads.clear();
@@ -52,6 +54,7 @@ public class Miner extends Thread{
             }
         }
         //now init new threads
+        System.out.println("[*] Mining a new block: " + lastBlock.toString());
         for (int i = 0 ; i < maxThreads ; ++i){
             SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
             st.start();
@@ -86,7 +89,7 @@ public class Miner extends Thread{
         public SolverThread(Block lastBlock, long seed){
             this.lastBlock = lastBlock;
             this.seed = seed;
-            alive.set(true);
+            alive = new AtomicBoolean(true);
         }
 
         public void kill(){
@@ -99,6 +102,7 @@ public class Miner extends Thread{
 
         @Override
         public void run() {
+            int tries = 0;
             MessageDigest md5;
             try {
                 md5 = MessageDigest.getInstance("MD5");
@@ -115,7 +119,12 @@ public class Miner extends Thread{
             byte[] puzzle = new byte[8];
             Outer:
             while (this.alive.get()) {
-                if (lastBlockIsOurs.get()) {
+                ++tries;
+                if (tries % 1000000 == 0){
+                    System.out.println("1000000 tries on " + this.toString());
+                }
+
+                while (lastBlockIsOurs.get()) {
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
@@ -131,24 +140,34 @@ public class Miner extends Thread{
                     System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
                     return;
                 }
-                int NZ = b.calcNZ();
-                int index = 15;
-                while (NZ >= 8) {
+                //check if puzzle is solved
+                int index = 15; //iterating from end to start
+                int numZerosToCheck = b.calcNZ();
+                while (numZerosToCheck >= 8) {
                     if (hash[index] != 0) {
                         continue Outer;
                     }
-                    index--;
-                    NZ -= 8;
+                    --index;
+                    numZerosToCheck -= 8;
                 }
-
-                if (NZ > 0) {
-                    if ((hash[index] & ((1 << NZ) - 1)) != 0) {
+                //there are less than 8 bits to check
+                if (numZerosToCheck > 0) { //there are bits left
+                    if ((hash[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
                         continue;
                     }
                 }
-
+                System.out.println(4);
+                b.setSig(Arrays.copyOfRange(hash, 0, 12));
                 // if got here, solution is valid
-                solutions.add(new Block(serial, wallet, prevSig, puzzle, Arrays.copyOfRange(hash, 0, 12)));
+//                try {
+//                    if (!Database.isValidContinuation(b)){
+//                        continue;
+//                    }
+//                } catch (NoSuchAlgorithmException e) {
+//                    System.out.println("no such algorithm");
+//                }
+
+                solutions.add(b);
 
             }
         }

@@ -11,8 +11,8 @@ public class Main {
         String host = addr[0];
         int port = Integer.parseInt(addr[1]);
         //important: use those two functions to reset the database.
-        //Database.saveBlockchain();
-        //Database.saveNodeList();
+        Database.saveBlockchain();
+        Database.saveNodeList();
         Database.init();
         Server server = new Server(host, port);
         server.startServer();

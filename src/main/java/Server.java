@@ -45,7 +45,7 @@ public class Server {
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         sendQueue.add(franji);
         // send initialization messages to all known nodes.
-        sendQueue.addAll(Database.getNodes().values());
+        //sendQueue.addAll(Database.getNodes().values());
 
         /**
          * Waiting for connections, updating and adding to send queue
@@ -230,6 +230,7 @@ public class Server {
             for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
+            addNodesToSend(Database.getNodes(), sendQueue);
 
             if (lastChange[0] + 300 < getCurrentEpoch()) { // if no change in the last 5 minutes
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");
@@ -298,11 +299,16 @@ public class Server {
 
 
     public void parseSolvedPuzzle(Block nextBlock){
+        System.out.println("Parsing solved puzzle");
         try {
             Database.update(nextBlock);
             miner.updateBlock(nextBlock);
+            miner.lastBlockIsOurs.set(true);
 
-        } catch (IOException e) {
+            //lastChange[0] = getCurrentEpoch();
+            //addNodesToSend(Database.getNodes(), sendQueue);
+
+        } catch (IOException | NoSuchAlgorithmException e) {
             System.out.format("[!] ERROR parsing new block");
         }
     }
@@ -328,6 +334,7 @@ public class Server {
             System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
             miner.lastBlockIsOurs.set(false);
             miner.blockchainChanged.set(true);
+            System.out.println("Blockchain changed!");
             //TODO update miner thread about new riddle
         }
         // check for changes in nodes and update the HashMap

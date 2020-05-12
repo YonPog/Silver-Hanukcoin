@@ -23,23 +23,23 @@ public class Database {
 
 
     public static void initMongoDB() {
-        Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
-        mongoLogger.setLevel(Level.OFF);
-//        MongoClient mongoClient = new MongoClient("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
-        MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
-//        MongoDatabase database = mongoClient.getDatabase("Blockchain");
-        DB database = mongoClient.getDB("Blockchain");
+//        Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
+//        mongoLogger.setLevel(Level.OFF);
+////        MongoClient mongoClient = new MongoClient("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
+//        MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
+////        MongoDatabase database = mongoClient.getDatabase("Blockchain");
+//        DB database = mongoClient.getDB("Blockchain");
+////        collection = database.getCollection("blockchain");
 //        collection = database.getCollection("blockchain");
-        collection = database.getCollection("blockchain");
     }
 
     public static void saveToMongoDB() {
         System.out.println("[*] saving to MongoDB");
-        for (Block b : blockchain) {
-//            collection.insertOne(b.toDocument());
-            DBObject person = new BasicDBObject(b.toDocument());
-            collection.insert(person);
-        }
+//        for (Block b : blockchain) {
+//////            collection.insertOne(b.toDocument());
+////            DBObject person = new BasicDBObject(b.toDocument());
+////            collection.insert(person);
+////        }
         System.out.println("[*] done!");
     }
 
@@ -47,6 +47,11 @@ public class Database {
      * Initializes the data with the saved nodes and blocks.
      */
     public static void init() throws Exception {
+        //byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
+        //DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
+        //writeStream.write(bytes);
+        //blocksInFile = 1;
+
         // TODO
         initMongoDB();
         loadNodeList();
@@ -123,7 +128,12 @@ public class Database {
         return 2;
     }
 
-    public static void update(Block newBlock) throws IOException {
+    public static void update(Block newBlock) throws IOException, NoSuchAlgorithmException {
+        System.out.println(Arrays.toString(newBlock.toBytes()));
+        if (!isValidContinuation(newBlock)){
+            System.out.println("-------------WRONG!");
+            return;
+        }
         blockchain.add(newBlock);
         saveBlockchain();
         System.out.println("[*] Mined a new block!");
@@ -133,9 +143,16 @@ public class Database {
         return blockchain;
     }
 
-    public static Block getLatestBlock() { return blockchain.get(0); }
+    public static Block getLatestBlock() { return blockchain.get(blockchain.size() - 1); }
 
     public static int getBlockchainLength() { return blockchain.size(); }
+
+    public static boolean isValidContinuation(Block newBlock) throws NoSuchAlgorithmException {
+        ArrayList<Block> newBlockchain = new ArrayList<>(blockchain);
+        newBlockchain.add(newBlock);
+        return isUpdateNeeded(newBlockchain);
+
+    }
 
     public static boolean isUpdateNeeded(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException {
         //if chain is empty, take the next one
