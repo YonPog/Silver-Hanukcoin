@@ -1,9 +1,3 @@
-//TODO save nodelist to file
-//TODO save blockchain to file
-
-
-import java.util.ArrayList;
-
 public class Main {
     public static void main(String[] args) throws Exception {
         //  Socket socket = new Socket("35.246.17.73", 8080);
@@ -16,7 +10,7 @@ public class Main {
         String[] addr = args[0].split(":");
         String host = addr[0];
         int port = Integer.parseInt(addr[1]);
-        //TODO important: when running first time run those two lines to create the necessary files
+        //important: use those two functions to reset the database.
         //Database.saveBlockchain();
         //Database.saveNodeList();
         Database.init();

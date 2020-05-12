@@ -24,7 +24,7 @@ public class Server {
         self.setNew(false);
         Database.setNode(new Pair<>(host, port), self);
 
-        // TODO temporary - will be fixed after reading from database
+        // TODO temporary - change to a dynamic first node (maybe reading from db)
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
         System.out.format("[*] Successfully initialized server on %s:%d\n", HOST, PORT);
@@ -40,9 +40,10 @@ public class Server {
         // last time a request to 3 nodes was sent
         final int[] lastChange = {getCurrentEpoch()}; // array because Java wanted so (for it to be final)
 
-        // TODO - send first messsages (temporary)
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         sendQueue.add(franji);
+        // send initialization messages to all known nodes.
+        sendQueue.addAll(Database.getNodes().values());
 
         /**
          * Waiting for connections, updating and adding to send queue
@@ -214,7 +215,6 @@ public class Server {
 
             // TODO
             Database.saveToMongoDB();
-            // TODO
 
             try {
                 Thread.sleep(60000); // check for changes every minute

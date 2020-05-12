@@ -49,7 +49,6 @@ public class Database {
     public static void init() throws Exception {
         // TODO
         initMongoDB();
-        // TODO
         loadNodeList();
         loadBlockchain();
     }
@@ -107,7 +106,6 @@ public class Database {
 
         // TODO
         saveToMongoDB();
-        // TODO
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {
