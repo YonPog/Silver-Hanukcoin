@@ -122,5 +122,12 @@ public class Block {
         return new Block(serNum, wallet, prevSig, puzzle, sig);
     }
 
+    public Document toDocument() {
+        return new Document("serial_number", this.getSerial_number())
+                .append("wallet", this.getWallet())
+                .append("prev_sig", this.getPrev_sig())
+                .append("puzzle", this.getPuzzle())
+                .append("sig", this.getSig());
+    }
 
 }

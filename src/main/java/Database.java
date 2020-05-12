@@ -1,3 +1,7 @@
+import com.mongodb.*;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 import javafx.util.Pair;
 
 import java.io.*;
@@ -5,6 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Database {
     private static ArrayList<Block> blockchain = new ArrayList<>();
@@ -13,11 +19,36 @@ public class Database {
     private static final String NODES_FILE = "nodes.Silver";
     private static final String BLOCKCHAIN_FILE = "blocks.Silver";
 
+    private static DBCollection collection;
+
+
+    public static void initMongoDB() {
+        Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
+        mongoLogger.setLevel(Level.OFF);
+//        MongoClient mongoClient = new MongoClient("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
+        MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
+//        MongoDatabase database = mongoClient.getDatabase("Blockchain");
+        DB database = mongoClient.getDB("Blockchain");
+//        collection = database.getCollection("blockchain");
+        collection = database.getCollection("blockchain");
+    }
+
+    public static void saveToMongoDB() {
+        System.out.println("[*] saving to MongoDB");
+        for (Block b : blockchain) {
+//            collection.insertOne(b.toDocument());
+            DBObject person = new BasicDBObject(b.toDocument());
+            collection.insert(person);
+        }
+    }
 
     /**
      * Initializes the data with the saved nodes and blocks.
      */
     public static void init() throws Exception {
+        // TODO
+        initMongoDB();
+        // TODO
         loadNodeList();
         loadBlockchain();
     }
@@ -72,6 +103,10 @@ public class Database {
             writeStream.write(blockchain.get(i).toBytes());
         }
         blocksInFile = blockchain.size();
+
+        // TODO
+        saveToMongoDB();
+        // TODO
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {
@@ -152,7 +187,6 @@ public class Database {
         }
         return true;
     }
-
 
 
 }

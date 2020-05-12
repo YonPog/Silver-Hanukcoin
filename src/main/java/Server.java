@@ -205,11 +205,17 @@ public class Server {
         new SenderThread().start();
 
         while (true) {
+
+            // TODO
+            Database.saveToMongoDB();
+            // TODO
+
             try {
                 Thread.sleep(60000); // check for changes every minute
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+
 
             System.out.println("[*] node list: ");
             for (Node n : Database.getNodes().values()) {
