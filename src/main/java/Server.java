@@ -311,7 +311,8 @@ public class Server {
         // update nodes if necessary
         boolean changed = statusCode != 0; // check if blockchain changed
         if (statusCode != 0) {
-            System.out.println("[*] sending new messages because blockchain changed");
+            System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
+            //TODO update miner thread about new riddle
         }
         // check for changes in nodes and update the HashMap
         for (Node n : message.getNodes()) {
