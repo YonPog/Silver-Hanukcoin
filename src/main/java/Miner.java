@@ -135,7 +135,7 @@ public class Miner extends Thread{
                 Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 byte[] hash;
                 try {
-                    hash = b.calcSig();
+                    hash = b.calcMD5();
                 } catch (NoSuchAlgorithmException e) {
                     System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
                     return;
@@ -156,7 +156,6 @@ public class Miner extends Thread{
                         continue;
                     }
                 }
-                System.out.println(4);
                 b.setSig(Arrays.copyOfRange(hash, 0, 12));
                 // if got here, solution is valid
 //                try {
@@ -168,6 +167,7 @@ public class Miner extends Thread{
 //                }
 
                 solutions.add(b);
+                break;
 
             }
         }

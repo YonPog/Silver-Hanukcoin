@@ -1,7 +1,4 @@
 import com.mongodb.*;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import org.bson.Document;
 import javafx.util.Pair;
 
 import java.io.*;
@@ -9,8 +6,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Database {
     private static ArrayList<Block> blockchain = new ArrayList<>();
@@ -176,20 +171,23 @@ public class Database {
         //now validate the next blocks
         for (int i = blockchain.size() ; i < newBlockchain.size() ; ++i){
             Block newBlock = newBlockchain.get(i);
-            byte[] digest = newBlock.calcSig();
+            byte[] digest = newBlock.calcMD5();
 
             //check if serial number is one more than previous one
-            if (newBlock.getSerial_number() != newBlockchain.get(i-1).getSerial_number() + 1) {
+            if (newBlock.getSerial_number() != newBlockchain.get(i - 1).getSerial_number() + 1) {
                 return false;
             }
 
             //check if wallet number is different than the last one
-            if (newBlock.getWallet() == newBlockchain.get(i-1).getWallet()) {
+            if (newBlock.getWallet() == newBlockchain.get(i - 1).getWallet()) {
                 return false;
             }
 
             //check if signature matches up
-            if (!Arrays.equals(digest, newBlock.getSig())) {
+            if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
+                // TODO temporary, for debugging purposes
+                System.out.println(Arrays.toString(newBlock.toBytes()));
+                System.out.println(Arrays.toString(newBlock.calcMD5()));
                 return false;
             }
 

@@ -90,7 +90,7 @@ public class Block {
         return (int) (21 + Math.floor(Utils.log(2, this.serial_number)));
     }
 
-    public byte[] calcSig() throws NoSuchAlgorithmException {
+    public byte[] calcMD5() throws NoSuchAlgorithmException {
         byte[] serNum = Utils.intToBytes(this.serial_number, 4);
         byte[] walletArray = Utils.intToBytes(this.wallet, 4);
         return MessageDigest.getInstance("MD5").digest(Utils.concat(serNum, walletArray, prev_sig, puzzle));
