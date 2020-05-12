@@ -6,6 +6,7 @@ public class Node {
     private String host;
     private int port;
     private int last_seen_ts;
+    private boolean isNew = true;
 
     public Node(String name, String host, int port, int last_seen_ts){
         this.name = name;
@@ -20,6 +21,14 @@ public class Node {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean isNew() {
+        return isNew;
+    }
+
+    public void setNew(boolean aNew) {
+        isNew = aNew;
     }
 
     public String getHost() {
@@ -60,6 +69,6 @@ public class Node {
 
     @Override
     public String toString(){
-        return String.format("<Node %s on %s:%d, last seen %d>\n", this.name, this.host, this.port, this.last_seen_ts);
+        return String.format("<Node %s on %s:%d, last seen %d, is new: %b>\n", this.name, this.host, this.port, this.last_seen_ts, this.isNew);
     }
 }

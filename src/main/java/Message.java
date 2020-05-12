@@ -89,11 +89,11 @@ public class Message {
                 String msg = "\t" + n.toString();
                 ret.append(msg);
             }
-            ret.append(String.format("\nand %d blocks:\n", this.blocks.size()));
-            for (Block b : this.blocks){
-                String msg = "\t" + b.toString();
-                ret.append(msg);
-            }
+            ret.append(String.format("\nand %d blocks...\n", this.blocks.size()));
+//            for (Block b : this.blocks){
+//                String msg = "\t" + b.toString();
+//                ret.append(msg);
+//            }
             return ret.toString();
         }
         else{
