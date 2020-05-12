@@ -181,7 +181,13 @@ public class Server {
                                 Message msg = conn.receive();
                                 // update database and variables according to the new information
                                 // and adding to sendQueue if something changed
-                                updateDatabase(msg, lastChange, sendQueue);
+                                new Thread(() -> {
+                                    try {
+                                        updateDatabase(msg, lastChange, sendQueue);
+                                    } catch (IOException e) {
+                                        System.out.format("[!] ERROR updating database\nDetails:\n%s\n", e.toString());
+                                    }
+                                }).start();
                                 // update new status, because the node responded to us
                                 Database.getNode(new Pair<>(target.getHost(), target.getPort())).setNew(false);
                                 System.out.format("[*] updated status to verified: %s", target.toString());
@@ -292,7 +298,6 @@ public class Server {
      * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
      * @param sendQueue  The queue to add 3 nodes to send a message to if needed
      */
-    //TODO: fix synchronization issues.
     synchronized public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
         // update the blockchain
         int statusCode;

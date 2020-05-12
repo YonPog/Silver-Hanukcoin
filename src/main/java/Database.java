@@ -40,6 +40,7 @@ public class Database {
             DBObject person = new BasicDBObject(b.toDocument());
             collection.insert(person);
         }
+        System.out.println("[*] done!");
     }
 
     /**
