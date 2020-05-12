@@ -14,10 +14,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Server {
     private final String HOST;
     private final int PORT;
+    private final Miner miner;
 
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
+        this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
         Node self = new Node("Silver", HOST, PORT, getCurrentEpoch());
@@ -210,6 +212,7 @@ public class Server {
         // don't forget we're still inside runServer ;)
         new ServerThread().start();
         new SenderThread().start();
+        miner.start();
 
         while (true) {
 
@@ -293,6 +296,17 @@ public class Server {
         return new Message(cmd, nodesToSend, blocksList);
     }
 
+
+    public void parseSolvedPuzzle(Block nextBlock){
+        try {
+            Database.update(nextBlock);
+            miner.updateBlock(nextBlock);
+
+        } catch (IOException e) {
+            System.out.format("[!] ERROR parsing new block");
+        }
+    }
+
     /**
      * @param message    The message containing (possibly new) data
      * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
@@ -312,6 +326,8 @@ public class Server {
         boolean changed = statusCode != 0; // check if blockchain changed
         if (statusCode != 0) {
             System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
+            miner.lastBlockIsOurs.set(false);
+            miner.blockchainChanged.set(true);
             //TODO update miner thread about new riddle
         }
         // check for changes in nodes and update the HashMap

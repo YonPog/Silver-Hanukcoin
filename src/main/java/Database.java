@@ -123,9 +123,19 @@ public class Database {
         return 2;
     }
 
+    public static void update(Block newBlock) throws IOException {
+        blockchain.add(newBlock);
+        saveBlockchain();
+        System.out.println("[*] Mined a new block!");
+    }
+
     public static ArrayList<Block> getBlocks() {
         return blockchain;
     }
+
+    public static Block getLatestBlock() { return blockchain.get(0); }
+
+    public static int getBlockchainLength() { return blockchain.size(); }
 
     public static boolean isUpdateNeeded(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException {
         //if chain is empty, take the next one
