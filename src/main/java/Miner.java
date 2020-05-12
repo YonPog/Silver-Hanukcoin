@@ -1,6 +1,12 @@
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+
 public class Miner extends Thread{
     private int maxThreads;
     private ConcurrentLinkedQueue<Block> solutions;
@@ -92,8 +98,59 @@ public class Miner extends Thread{
         }
 
         @Override
-        public void run(){
+        public void run() {
+            MessageDigest md5;
+            try {
+                md5 = MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+                return;
+            }
+            Random generator = new Random(seed);
+            int serial = lastBlock.getSerial_number() + 1;
+            byte[] nameSig = Arrays.copyOfRange(md5.digest("Silver".getBytes()), 0, 4);
+            int wallet = Utils.bytesToInt(nameSig);
+            byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
 
+            byte[] puzzle = new byte[8];
+            Outer:
+            while (this.alive.get()) {
+                if (lastBlockIsOurs.get()) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
+                    }
+                }
+                generator.nextBytes(puzzle);
+                Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
+                byte[] hash;
+                try {
+                    hash = b.calcSig();
+                } catch (NoSuchAlgorithmException e) {
+                    System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+                    return;
+                }
+                int NZ = b.calcNZ();
+                int index = 15;
+                while (NZ >= 8) {
+                    if (hash[index] != 0) {
+                        continue Outer;
+                    }
+                    index--;
+                    NZ -= 8;
+                }
+
+                if (NZ > 0) {
+                    if ((hash[index] & ((1 << NZ) - 1)) != 0) {
+                        continue;
+                    }
+                }
+
+                // if got here, solution is valid
+                solutions.add(new Block(serial, wallet, prevSig, puzzle, Arrays.copyOfRange(hash, 0, 12)));
+
+            }
         }
     }
 }
