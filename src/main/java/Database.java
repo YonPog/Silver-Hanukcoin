@@ -174,12 +174,22 @@ public class Database {
         if (newBlockchain.size() <= blockchain.size()) {
             return false;
         }
-        //check that the chains match up
-        if (!blockchain.get(blockchain.size() - 1).equals(newBlockchain.get(blockchain.size() - 1))) {
-            return false;
+        //find until where the chains add up
+        int lastCommon = findLastCommonBlock(newBlockchain);
+        System.out.println("last common block " + blockchain.get(lastCommon));
+        if (lastCommon < 0){
+            System.out.println("wrong genesis");
+            return false; //wrong genesis
         }
+
+        if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
+            System.out.println("chose other one because puzzle shorter");
+            return false; //TODO
+        }
+
+
         //now validate the next blocks
-        for (int i = blockchain.size() ; i < newBlockchain.size() ; ++i){
+        for (int i = lastCommon+1 ; i < newBlockchain.size() ; ++i){
             Block newBlock = newBlockchain.get(i);
             byte[] digest = newBlock.calcMD5();
 
@@ -206,6 +216,7 @@ public class Database {
             int numZerosToCheck = newBlock.calcNZ();
             while (numZerosToCheck >= 8) {
                 if (digest[index] != 0) {
+                    System.out.println("wrong sig, " + index);
                     return false;
                 }
                 --index;
@@ -215,11 +226,24 @@ public class Database {
             //there are less than 8 bits to check
             if (numZerosToCheck > 0) { //there are bits left
                 if ((digest[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
+                    System.out.println("wrong sig, ()" + index);
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    /*
+    @pre blockchain.size() <= newBlockchain.size()
+     */
+    public static int findLastCommonBlock(ArrayList<Block> newBlockchain){
+        for (int i = blockchain.size() - 1 ; i >= 0 ; --i){
+            if (blockchain.get(i).equals(newBlockchain.get(i))){
+                return i;
+            }
+        }
+        return -1 ;
     }
 
 
