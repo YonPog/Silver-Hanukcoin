@@ -112,7 +112,7 @@ public class Miner extends Thread{
             }
             Random generator = new Random(seed);
             int serial = lastBlock.getSerial_number() + 1;
-            byte[] nameSig = Arrays.copyOfRange(md5.digest("Silver".getBytes()), 0, 4);
+            byte[] nameSig = Arrays.copyOfRange(md5.digest("SilverCopy".getBytes()), 0, 4);
             int wallet = Utils.bytesToInt(nameSig);
             byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
 
@@ -122,6 +122,7 @@ public class Miner extends Thread{
                 ++tries;
                 if (tries % 1000000 == 0){
                     System.out.println("1000000 tries on " + this.toString());
+                    tries = 0;
                 }
 
                 while (lastBlockIsOurs.get()) {

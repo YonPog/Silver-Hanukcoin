@@ -22,7 +22,7 @@ public class Server {
         this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
-        Node self = new Node("Silver", HOST, PORT, getCurrentEpoch());
+        Node self = new Node("SilverCopy", HOST, PORT, getCurrentEpoch());
         self.setNew(false);
         Database.setNode(new Pair<>(host, port), self);
 
@@ -171,7 +171,7 @@ public class Server {
                                     target.getHost(),
                                     target.getPort(),
                                     e.toString());
-                            return;
+                            continue;
                         }
                     }
 
