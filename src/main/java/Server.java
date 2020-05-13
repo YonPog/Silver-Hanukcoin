@@ -81,7 +81,7 @@ public class Server {
                         }
                     } catch (IOException e) {
                         System.out.format("[!] ERROR accepting connection. Details:\n%s", e.toString());
-                        return;
+                        continue;
                     }
                 }
             }
@@ -200,11 +200,11 @@ public class Server {
 
                             }
                         } catch (Exception e) {
-                            System.out.format("[!] ERROR receiving message to %s:%d\nDetails:\n%s",
+                            System.out.format("[!] ERROR receiving message from %s:%d\nDetails:\n%s",
                                     target.getHost(),
                                     target.getPort(),
                                     e.toString());
-                            return;
+                            continue;
                         }
                     }
 
@@ -368,8 +368,8 @@ public class Server {
         ArrayList<Node> toAdd = chooseNodes(map);
         sendQueue.addAll(toAdd);
         //TODO temporary until we can trust the network
-        Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
-        sendQueue.add(franji);
+        Node backup = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch());
+        sendQueue.add(backup);
     }
 
     /**
