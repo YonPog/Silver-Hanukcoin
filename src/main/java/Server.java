@@ -15,6 +15,9 @@ public class Server {
     private final String HOST;
     private final int PORT;
     private final Miner miner;
+    private final int[] lastChange = new int[1];
+    private ConcurrentLinkedQueue<Node> sendQueue;
+
 
     public Server(String host, int port) throws IOException {
         this.HOST = host;
@@ -22,7 +25,7 @@ public class Server {
         this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
-        Node self = new Node("SilverCopy", HOST, PORT, getCurrentEpoch());
+        Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
         self.setNew(false);
         Database.setNode(new Pair<>(host, port), self);
 
@@ -37,10 +40,10 @@ public class Server {
      */
     public void startServer() {
 
-        ConcurrentLinkedQueue<Node> sendQueue = new ConcurrentLinkedQueue<>(); // nodes to send to them
+        sendQueue = new ConcurrentLinkedQueue<>(); // nodes to send to them
 
         // last time a request to 3 nodes was sent
-        final int[] lastChange = {getCurrentEpoch()}; // array because Java wanted so (for it to be final)
+        lastChange[0] = getCurrentEpoch(); // array because Java wanted so (for it to be final)
 
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         sendQueue.add(franji);
@@ -114,7 +117,7 @@ public class Server {
                     // update database and variables according to the new information
                     // and adding to sendQueue if something changed
                     try {
-                        updateDatabase(message, lastChange, sendQueue);
+                        updateDatabase(message);
                     } catch (IOException e) {
                         System.out.println("[!] ERROR writing node change");
                     }
@@ -186,7 +189,7 @@ public class Server {
                                 // and adding to sendQueue if something changed
                                 new Thread(() -> {
                                     try {
-                                        updateDatabase(msg, lastChange, sendQueue);
+                                        updateDatabase(msg);
                                     } catch (IOException e) {
                                         System.out.format("[!] ERROR updating database\nDetails:\n%s\n", e.toString());
                                     }
@@ -230,13 +233,13 @@ public class Server {
             for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
-            addNodesToSend(Database.getNodes(), sendQueue);
+            addNodesToSend(Database.getNodes());
 
             if (lastChange[0] + 300 < getCurrentEpoch()) { // if no change in the last 5 minutes
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");
                 lastChange[0] = getCurrentEpoch();
                 // add 3 random nodes from the HashMap
-                addNodesToSend(Database.getNodes(), sendQueue);
+                addNodesToSend(Database.getNodes());
             }
 
             // delete every node that wasn't seen in the last 30 minutes
@@ -304,9 +307,8 @@ public class Server {
             Database.update(nextBlock);
             miner.updateBlock(nextBlock);
             miner.lastBlockIsOurs.set(true);
-
-            //lastChange[0] = getCurrentEpoch();
-            //addNodesToSend(Database.getNodes(), sendQueue);
+            lastChange[0] = getCurrentEpoch();
+            addNodesToSend(Database.getNodes());
 
         } catch (IOException | NoSuchAlgorithmException e) {
             System.out.format("[!] ERROR parsing new block");
@@ -315,10 +317,8 @@ public class Server {
 
     /**
      * @param message    The message containing (possibly new) data
-     * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
-     * @param sendQueue  The queue to add 3 nodes to send a message to if needed
      */
-    synchronized public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
+    synchronized public void updateDatabase(Message message) throws IOException {
         // update the blockchain
         int statusCode;
         try {
@@ -357,18 +357,19 @@ public class Server {
         }
         if (changed) {
             lastChange[0] = getCurrentEpoch();
-            addNodesToSend(Database.getNodes(), sendQueue);
+            addNodesToSend(Database.getNodes());
         }
     }
 
     /**
      * @param map       The HashMap of the nodes
-     * @param sendQueue The queue to add the nodes to
      */
-    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
-                               ConcurrentLinkedQueue<Node> sendQueue) {
+    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
         ArrayList<Node> toAdd = chooseNodes(map);
         sendQueue.addAll(toAdd);
+        //TODO temporary until we can trust the network
+        Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
+        sendQueue.add(franji);
     }
 
     /**

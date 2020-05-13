@@ -21,7 +21,7 @@ public class Miner extends Thread{
         this.server = server;
         lastBlock = Database.getLatestBlock(); //get the latest block
         this.maxThreads = maxThreads;
-
+        //checking if last block is ours
         MessageDigest md5;
         try {
             md5 = MessageDigest.getInstance("MD5");
@@ -32,11 +32,11 @@ public class Miner extends Thread{
         byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
         int wallet = Utils.bytesToInt(nameSig);
         this.lastBlockIsOurs = new AtomicBoolean(lastBlock.getWallet() == wallet);
+        //done!
+
         this.blockchainChanged = new AtomicBoolean(false);
-        System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
         for (int i = 0; i < maxThreads; ++i) {
             SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
-            st.start();
             threads.add(st);
         }
     }
@@ -83,6 +83,12 @@ public class Miner extends Thread{
             }
         }
 
+        System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
+        for (SolverThread st : threads){
+            st.start();
+        }
+
+
         while (true) {
             //check if anyone has solved the riddle.
             if (!solutions.isEmpty()) {
@@ -120,7 +126,6 @@ public class Miner extends Thread{
 
         @Override
         public void run() {
-            int tries = 0;
             MessageDigest md5;
             try {
                 md5 = MessageDigest.getInstance("MD5");
@@ -154,7 +159,7 @@ public class Miner extends Thread{
                 Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 byte[] hash;
                 try {
-                    hash = b.calcMD5();
+                    hash = b.calcMD5(); //why isnt the digest cut down? TODO
                 } catch (NoSuchAlgorithmException e) {
                     System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
                     return;

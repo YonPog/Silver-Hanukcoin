@@ -136,7 +136,7 @@ public class Database {
     public static void update(Block newBlock) throws IOException, NoSuchAlgorithmException {
         System.out.println(Arrays.toString(newBlock.toBytes()));
         if (!isValidContinuation(newBlock)){
-            System.out.println("-------------WRONG!");
+            System.out.println("[!] -------------------------------------------------WRONG!");
             return;
         }
         blockchain.add(newBlock);
