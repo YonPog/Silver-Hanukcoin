@@ -22,7 +22,7 @@ public class Server {
         this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
-        Node self = new Node("SilverCopy", HOST, PORT, getCurrentEpoch());
+        Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
         self.setNew(false);
         Database.setNode(new Pair<>(host, port), self);
 
@@ -230,7 +230,7 @@ public class Server {
             for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
-            addNodesToSend(Database.getNodes(), sendQueue);
+//            addNodesToSend(Database.getNodes(), sendQueue);
 
             if (lastChange[0] + 300 < getCurrentEpoch()) { // if no change in the last 5 minutes
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");

@@ -21,10 +21,20 @@ public class Miner extends Thread{
         this.server = server;
         lastBlock = Database.getLatestBlock(); //get the latest block
         this.maxThreads = maxThreads;
-        this.lastBlockIsOurs = new AtomicBoolean(false);
+
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+            return;
+        }
+        byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
+        int wallet = Utils.bytesToInt(nameSig);
+        this.lastBlockIsOurs = new AtomicBoolean(lastBlock.getWallet() == wallet);
         this.blockchainChanged = new AtomicBoolean(false);
         System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
-        for (int i = 0 ; i < maxThreads ; ++i){
+        for (int i = 0; i < maxThreads; ++i) {
             SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
             st.start();
             threads.add(st);
@@ -46,7 +56,7 @@ public class Miner extends Thread{
         }
         threads.clear();
         //wait until next block is mined...
-        if (lastBlockIsOurs.get()){
+        while (lastBlockIsOurs.get()) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -63,17 +73,25 @@ public class Miner extends Thread{
     }
 
     @Override
-    public void run(){
+    public void run() {
 
-        while (true){
+        while (lastBlockIsOurs.get()) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
+            }
+        }
+
+        while (true) {
             //check if anyone has solved the riddle.
-            if (!solutions.isEmpty()){
+            if (!solutions.isEmpty()) {
                 Block candidate = solutions.remove();
                 server.parseSolvedPuzzle(candidate);
             }
 
             //check if blockchain changed
-            if (blockchainChanged.compareAndSet(true, false)){
+            if (blockchainChanged.compareAndSet(true, false)) {
                 lastBlock = Database.getLatestBlock();
                 refresh();
             }
@@ -112,18 +130,18 @@ public class Miner extends Thread{
             }
             Random generator = new Random(seed);
             int serial = lastBlock.getSerial_number() + 1;
-            byte[] nameSig = Arrays.copyOfRange(md5.digest("SilverCopy".getBytes()), 0, 4);
+            byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
             int wallet = Utils.bytesToInt(nameSig);
             byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
 
             byte[] puzzle = new byte[8];
             Outer:
             while (this.alive.get()) {
-                ++tries;
-                if (tries % 1000000 == 0){
-                    System.out.println("1000000 tries on " + this.toString());
-                    tries = 0;
-                }
+//                ++tries;
+//                if (tries % 1000000 == 0){
+//                    System.out.println("1000000 tries on " + this.toString());
+//                    tries = 0;
+//                }
 
                 while (lastBlockIsOurs.get()) {
                     try {
