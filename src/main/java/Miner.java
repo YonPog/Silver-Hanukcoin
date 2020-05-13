@@ -159,7 +159,7 @@ public class Miner extends Thread{
                 Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 byte[] hash;
                 try {
-                    hash = b.calcMD5(); //why isnt the digest cut down? TODO
+                    hash = b.calcMD5();
                 } catch (NoSuchAlgorithmException e) {
                     System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
                     return;

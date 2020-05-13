@@ -24,6 +24,7 @@ public class Main {
         //important: use those two functions to reset the database.
 //        Database.saveBlockchain();
 //        Database.saveNodeList();
+        Database.wipe();
         Database.init();
         Server server = new Server(host, port);
         server.startServer();
