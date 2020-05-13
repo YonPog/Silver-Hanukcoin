@@ -53,6 +53,13 @@ public class Database {
         loadBlockchain();
     }
 
+    public static void wipe() throws IOException {
+        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
+        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
+        writeStream.write(bytes);
+        blocksInFile = 1;
+    }
+
     public static ConcurrentHashMap<Pair<String, Integer>, Node> getNodes() {
         return nodes;
     }
@@ -88,9 +95,12 @@ public class Database {
 
     public static void loadBlockchain() throws IOException {
         DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
+        int numblocks = 1;
         while (stream.available() > 0) {
             blockchain.add(Block.parseBlock(stream));
+            ++numblocks;
         }
+        blocksInFile = numblocks;
     }
 
     /**
