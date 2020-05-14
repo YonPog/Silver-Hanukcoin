@@ -183,8 +183,18 @@ public class Database {
         }
 
         if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
-            System.out.println("chose other one because puzzle shorter");
-            return false; // TODO!
+            System.out.println("chose one because puzzle shorter");
+            Block currLast = blockchain.get(blockchain.size() - 1);
+            Block newlast = newBlockchain.get(newBlockchain.size() - 1);
+            for (int i = 0; i < 8; i++) {
+                if (currLast.getPuzzle()[i] < newlast.getPuzzle()[i]) {
+                    return false;
+                }
+                if (currLast.getPuzzle()[i] > newlast.getPuzzle()[i]) {
+                    return true;
+                }
+            }
+            return false;
         }
 
 

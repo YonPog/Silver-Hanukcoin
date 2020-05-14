@@ -233,7 +233,7 @@ public class Server {
             for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
-            addNodesToSend(Database.getNodes());
+            // addNodesToSend(Database.getNodes());
 
             if (lastChange[0] + 300 < getCurrentEpoch()) { // if no change in the last 5 minutes
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");
