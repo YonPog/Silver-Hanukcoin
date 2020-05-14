@@ -6,6 +6,7 @@ import java.util.Arrays;
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBObject;
 import org.bson.Document;
+import org.bson.types.Binary;
 
 public class Block {
     private int serial_number;
@@ -125,9 +126,10 @@ public class Block {
     public Document toDocument() {
         return new Document("serial_number", this.getSerial_number())
                 .append("wallet", this.getWallet())
-                .append("prev_sig", this.getPrev_sig())
-                .append("puzzle", this.getPuzzle())
-                .append("sig", this.getSig());
+                .append("prev_sig", new Binary(this.getPrev_sig()))
+                .append("puzzle", new Binary(this.getPuzzle()))
+                .append("sig", new Binary(this.getSig()))
+                .append("bin", new Binary(this.toBytes()));
     }
 
 }

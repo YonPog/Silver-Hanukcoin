@@ -1,40 +1,79 @@
 import com.mongodb.*;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import javafx.util.Pair;
+import org.bson.Document;
 
 import java.io.*;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Database {
     private static ArrayList<Block> blockchain = new ArrayList<>();
     private static ConcurrentHashMap<Pair<String, Integer>, Node> nodes = new ConcurrentHashMap<>(); //host:port, node
+    private static ConcurrentHashMap<Integer, String> wallet_pairs_names = new ConcurrentHashMap<>(); // Wallet, Node's name
     private static int blocksInFile = 0;
     private static final String NODES_FILE = "nodes.Silver";
     private static final String BLOCKCHAIN_FILE = "blocks.Silver";
 
-    private static DBCollection collection;
+    private static MongoCollection<Document> collection;
 
 
     public static void initMongoDB() {
-//        Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
-//        mongoLogger.setLevel(Level.OFF);
-////        MongoClient mongoClient = new MongoClient("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
-//        MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
-////        MongoDatabase database = mongoClient.getDatabase("Blockchain");
-//        DB database = mongoClient.getDB("Blockchain");
-////        collection = database.getCollection("blockchain");
-//        collection = database.getCollection("blockchain");
+        Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
+        mongoLogger.setLevel(Level.OFF);
+        MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
+        MongoDatabase database = mongoClient.getDatabase("Blockchain");
+        collection = database.getCollection("blockchain");
+
+        // If you'd like to empty mongodb, uncomment those lines
+//         BasicDBObject blank = new BasicDBObject();
+//         collection.deleteMany(blank);
+
+        // If the database was wiped and we need to upload the blockchain
+//        update_wallet_pairs_names();
+        // Uncomment to print wallet_pairs_names keys and values
+        // wallet_pairs_names.forEach((k,v)-> System.out.println("key: "+k+", value: "+v));
+//         for (int i = 0; i < blockchain.size(); ++i) {
+//             Block block = blockchain.get(i);
+//             collection.insertOne( block.toDocument()
+//                     .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
+//         }
+    }
+
+    private static void update_wallet_pairs_names() {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+            return;
+        }
+
+        // Block.wallet = first 4 bytes of md5(team_name)
+        for (Node node : nodes.values()) {
+            byte[] nameSig = Arrays.copyOfRange(md5.digest(node.getName().getBytes()), 0, 4);
+            int wallet = Utils.bytesToInt(nameSig);
+            wallet_pairs_names.putIfAbsent(wallet, node.getName());
+        }
     }
 
     public static void saveToMongoDB() {
         System.out.println("[*] saving to MongoDB");
-//        for (Block b : blockchain) {
-//////            collection.insertOne(b.toDocument());
-////            DBObject person = new BasicDBObject(b.toDocument());
-////            collection.insert(person);
-////        }
+
+        int oldBlocks = blocksInFile;
+        update_wallet_pairs_names();
+
+        for (int i = oldBlocks; i < blockchain.size(); ++i) {
+            Block block = blockchain.get(i);
+            collection.insertOne( block.toDocument()
+                                .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
+        }
         System.out.println("[*] done!");
     }
 
@@ -48,9 +87,9 @@ public class Database {
         //blocksInFile = 1;
 
         // TODO
-        initMongoDB();
         loadNodeList();
         loadBlockchain();
+        initMongoDB();
     }
 
     public static void wipe() throws IOException {
