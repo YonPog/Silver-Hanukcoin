@@ -332,6 +332,7 @@ public class Server {
         if (statusCode != 0) {
             System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
             miner.blockchainChanged.set(true);
+            miner.updateBlock(Database.getLatestBlock());
             System.out.println("Blockchain changed!");
         }
         // check for changes in nodes and update the HashMap

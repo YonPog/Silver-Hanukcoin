@@ -14,28 +14,21 @@ public class Miner extends Thread{
     private Block lastBlock;
     private Server server;
     public AtomicBoolean blockchainChanged;
+    public AtomicBoolean lastBlockIsOurs;
     private int wallet;
 
 
     public Miner(int maxThreads, Server server){
         this.server = server;
-        lastBlock = Database.getLatestBlock(); //get the latest block
+        this.lastBlock = Database.getLatestBlock(); //get the latest block
         this.maxThreads = maxThreads;
         //checking if last block is ours
-        MessageDigest md5;
-        try {
-            md5 = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
-            return;
-        }
-        byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
-        wallet = Utils.bytesToInt(nameSig);
+        lastBlockIsOurs = new AtomicBoolean(isOurs(lastBlock));
         //done!
 
         this.blockchainChanged = new AtomicBoolean(false);
         for (int i = 0; i < maxThreads; ++i) {
-            SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
+            SolverThread st = new SolverThread(i); // make sure serial number seeds are ok.
             threads.add(st);
         }
     }
@@ -43,41 +36,22 @@ public class Miner extends Thread{
     public void updateBlock(Block newBlock){
         if (newBlock.getSerial_number() > lastBlock.getSerial_number()){
             lastBlock = newBlock;
+            blockchainChanged.set(true);
+            lastBlockIsOurs.set(isOurs(newBlock));
         }
-        //refresh all solver threads.
-        refresh();
     }
 
-    private void refresh(){
-        for (SolverThread t : threads){
-            System.out.println("killed " + t.toString());
-            t.kill();
+    private boolean isOurs(Block lastBlock){
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+            return false;
         }
-        threads.clear();
-        //wait until next block is mined...
-        while (!blockchainChanged.get()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
-            }
-        }
-        // just to make sure, shouldnt get HERE!
-        while (lastBlock.getWallet() == wallet){
-            try {
-                System.out.println("[!] ERROR blockchain updated but last block still ours");
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
-            }
-        }
-        //now init new threads
-        System.out.println("[*] Mining a new block: " + lastBlock.toString());
-        for (int i = 0 ; i < maxThreads ; ++i){
-            SolverThread st = new SolverThread(lastBlock, i); // make sure serial number seeds are ok.
-            st.start();
-            threads.add(st);
-        }
+        byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
+        wallet = Utils.bytesToInt(nameSig);
+        return wallet == lastBlock.getWallet();
     }
 
     @Override
@@ -106,30 +80,19 @@ public class Miner extends Thread{
 
             //check if blockchain changed
             if (blockchainChanged.compareAndSet(true, false)) {
+                System.out.println("[*] Started mining a new block: " + lastBlock.toString());
                 lastBlock = Database.getLatestBlock();
-                refresh();
+                lastBlockIsOurs.set(isOurs(lastBlock));
             }
 
         }
     }
 
     private class SolverThread extends Thread{
-        private Block lastBlock;
         private final long seed;
-        private AtomicBoolean alive;
 
-        public SolverThread(Block lastBlock, long seed){
-            this.lastBlock = lastBlock;
+        public SolverThread(long seed){
             this.seed = seed;
-            alive = new AtomicBoolean(true);
-        }
-
-        public void kill(){
-            alive.set(false);
-        }
-
-        public void setLastBlock(Block newBlock){
-            this.lastBlock = newBlock;
         }
 
         @Override
@@ -142,58 +105,65 @@ public class Miner extends Thread{
                 return;
             }
             Random generator = new Random(seed);
-            int serial = lastBlock.getSerial_number() + 1;
-            byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
-            int wallet = Utils.bytesToInt(nameSig);
-            byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
 
-            byte[] puzzle = new byte[8];
-            Outer:
-            //in every iteration, check if you need to mine or not.
-            while (this.alive.get() && (lastBlock = Database.getLatestBlock()).getWallet() == wallet) {
+            while (true){
+                // generate new goals
+                System.out.println("[*] Refreshed miner " + this.toString() + " and started mining #" + lastBlock.getSerial_number());
+
+                int serial = lastBlock.getSerial_number() + 1;
+                byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
+                int wallet = Utils.bytesToInt(nameSig);
+                byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
+                byte[] puzzle = new byte[8];
+
+                // start mining
+                Outer:
+                //in every iteration, check if there is a change in the blockchain
+                while (!blockchainChanged.get()) {
 //                ++tries;
 //                if (tries % 1000000 == 0){
 //                    System.out.println("1000000 tries on " + this.toString());
 //                    tries = 0;
 //                }
-
-                generator.nextBytes(puzzle);
-                Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
-                byte[] hash;
-                try {
-                    hash = b.calcMD5();
-                } catch (NoSuchAlgorithmException e) {
-                    System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
-                    return;
-                }
-                //check if puzzle is solved
-                int index = 15; //iterating from end to start
-                int numZerosToCheck = b.calcNZ();
-                while (numZerosToCheck >= 8) {
-                    if (hash[index] != 0) {
-                        continue Outer;
+                    generator.nextBytes(puzzle);
+                    Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
+                    byte[] hash;
+                    try {
+                        hash = b.calcMD5();
+                    } catch (NoSuchAlgorithmException e) {
+                        System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+                        return;
                     }
-                    --index;
-                    numZerosToCheck -= 8;
+                    //check if puzzle is solved
+                    int index = 15; //iterating from end to start
+                    int numZerosToCheck = b.calcNZ();
+                    while (numZerosToCheck >= 8) {
+                        if (hash[index] != 0) {
+                            continue Outer;
+                        }
+                        --index;
+                        numZerosToCheck -= 8;
+                    }
+                    //there are less than 8 bits to check
+                    if (numZerosToCheck > 0) { //there are bits left
+                        if ((hash[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
+                            continue;
+                        }
+                    }
+                    b.setSig(Arrays.copyOfRange(hash, 0, 12));
+                    solutions.add(b);
+                    break;
                 }
-                //there are less than 8 bits to check
-                if (numZerosToCheck > 0) { //there are bits left
-                    if ((hash[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
-                        continue;
+
+                // if we got here, it means the blockchain changed. if its because we mined, wait until another block arrives
+
+                while (lastBlockIsOurs.get()){
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
                     }
                 }
-                b.setSig(Arrays.copyOfRange(hash, 0, 12));
-                // if got here, solution is valid
-//                try {
-//                    if (!Database.isValidContinuation(b)){
-//                        continue;
-//                    }
-//                } catch (NoSuchAlgorithmException e) {
-//                    System.out.println("no such algorithm");
-//                }
-
-                solutions.add(b);
-                break;
 
             }
         }

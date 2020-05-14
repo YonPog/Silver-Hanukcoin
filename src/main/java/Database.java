@@ -95,7 +95,7 @@ public class Database {
 
     public static void loadBlockchain() throws IOException {
         DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
-        int numblocks = 1;
+        int numblocks = 0;
         while (stream.available() > 0) {
             blockchain.add(Block.parseBlock(stream));
             ++numblocks;
@@ -166,12 +166,12 @@ public class Database {
         }
 
         //to prevent errors
-        if (newBlockchain.size() == 0 || blockchain.size() == newBlockchain.size()){
+        if (newBlockchain.size() == 0){
             return false;
         }
 
         //first, check the new chain is longer.
-        if (newBlockchain.size() <= blockchain.size()) {
+        if (newBlockchain.size() < blockchain.size()) {
             return false;
         }
         //find until where the chains add up
@@ -184,7 +184,7 @@ public class Database {
 
         if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
             System.out.println("chose other one because puzzle shorter");
-            return true; // TODO!
+            return false; // TODO!
         }
 
 
