@@ -44,7 +44,7 @@ public class Database {
 //             collection.insertOne( block.toDocument()
 //                     .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
 //         }
-        System.out.println(blockchain.get(960));
+        saveToMongoDB((int) collection.count());
     }
 
     private static void update_wallet_pairs_names() {
@@ -75,8 +75,8 @@ public class Database {
             Document doc = block.toDocument()
                     .append("wallet_name", wallet_pairs_names.get(block.getWallet()));
 
-            if (i < blockchain.size()) {
-                BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
+            BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
+            if (i < blockchain.size() && collection.find(query).limit(1).first() != null) {
                 collection.findOneAndReplace(query, doc);
             } else {
                 collection.insertOne(doc);
