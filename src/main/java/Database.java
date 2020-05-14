@@ -44,6 +44,7 @@ public class Database {
 //             collection.insertOne( block.toDocument()
 //                     .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
 //         }
+        System.out.println(blockchain.get(960));
     }
 
     private static void update_wallet_pairs_names() {
@@ -63,16 +64,23 @@ public class Database {
         }
     }
 
-    public static void saveToMongoDB() {
+    public static void saveToMongoDB(int oldBlockLength) {
         System.out.println("[*] saving to MongoDB");
 
         int oldBlocks = blocksInFile;
         update_wallet_pairs_names();
 
-        for (int i = oldBlocks; i < blockchain.size(); ++i) {
+        for (int i = oldBlockLength; i < blockchain.size(); ++i) {
             Block block = blockchain.get(i);
-            collection.insertOne( block.toDocument()
-                                .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
+            Document doc = block.toDocument()
+                    .append("wallet_name", wallet_pairs_names.get(block.getWallet()));
+
+            if (i < blockchain.size()) {
+                BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
+                collection.findOneAndReplace(query, doc);
+            } else {
+                collection.insertOne(doc);
+            }
         }
         System.out.println("[*] done!");
     }
@@ -154,7 +162,7 @@ public class Database {
         blocksInFile = blockchain.size();
 
         // TODO
-        saveToMongoDB();
+        saveToMongoDB(oldBlocks);
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {

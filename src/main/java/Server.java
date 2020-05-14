@@ -220,7 +220,7 @@ public class Server {
         while (true) {
 
             // TODO
-            Database.saveToMongoDB();
+//            Database.saveToMongoDB();
 
             try {
                 Thread.sleep(60000); // check for changes every minute
