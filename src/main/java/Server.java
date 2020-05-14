@@ -125,7 +125,7 @@ public class Server {
                     System.out.println("[*] creating the response for this message");
                     try {
                         // building the response based on the network state
-                        conn.send(buildMessage(2));
+                        conn.send(generateMessage(2));
                     } catch (IOException e) {
                         System.out.format("[!] ERROR failed to respond to %s:%d\n.Details:\n %s\n",
                                 socket.getInetAddress().toString(),
@@ -159,14 +159,14 @@ public class Server {
                     // update timestamp of ourselves
                     Database.getNode(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentEpoch());
                     // open new sockets for new messages
-                    if (!sendQueue.isEmpty()) { // there is someone we need to send a message to
+                    while (!sendQueue.isEmpty()) { // there is someone we need to send a message to
                         Node target = sendQueue.remove(); // retrieves the head of the queue and deletes it
                         try {
                             Socket sock = new Socket(target.getHost(), target.getPort());
                             // create the connection
                             Connection conn = new Connection(sock);
                             // build the request and send it
-                            conn.send(buildMessage(1));
+                            conn.send(generateMessage(1));
                             // add the socket to the pending arraylist
                             pending.add(new Pair<>(conn, target));
                         } catch (Exception e) {
@@ -286,7 +286,7 @@ public class Server {
      * @param cmd The cmd field of the message to be sent
      * @return The message built from cmd and the state of the network (nodes and blockchain)
      */
-    public Message buildMessage(int cmd) {
+    public Message generateMessage(int cmd) {
         // only sending verified nodes
         ArrayList<Node> nodesToSend = new ArrayList<>();
         for (Node n : Database.getNodes().values()) {
@@ -306,7 +306,6 @@ public class Server {
         try {
             Database.update(nextBlock);
             miner.updateBlock(nextBlock);
-            miner.lastBlockIsOurs.set(true);
             lastChange[0] = getCurrentEpoch();
             addNodesToSend(Database.getNodes());
 
@@ -332,10 +331,8 @@ public class Server {
         boolean changed = statusCode != 0; // check if blockchain changed
         if (statusCode != 0) {
             System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
-            miner.lastBlockIsOurs.set(false);
             miner.blockchainChanged.set(true);
             System.out.println("Blockchain changed!");
-            //TODO update miner thread about new riddle
         }
         // check for changes in nodes and update the HashMap
         for (Node n : message.getNodes()) {

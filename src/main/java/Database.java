@@ -184,7 +184,7 @@ public class Database {
 
         if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
             System.out.println("chose other one because puzzle shorter");
-            return false; //TODO
+            return true; // TODO!
         }
 
 
@@ -216,7 +216,6 @@ public class Database {
             int numZerosToCheck = newBlock.calcNZ();
             while (numZerosToCheck >= 8) {
                 if (digest[index] != 0) {
-                    System.out.println("wrong sig, " + index);
                     return false;
                 }
                 --index;
@@ -226,7 +225,6 @@ public class Database {
             //there are less than 8 bits to check
             if (numZerosToCheck > 0) { //there are bits left
                 if ((digest[index] & ((1 << numZerosToCheck) - 1)) != 0) { //mask
-                    System.out.println("wrong sig, ()" + index);
                     return false;
                 }
             }

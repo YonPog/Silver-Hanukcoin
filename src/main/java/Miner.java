@@ -13,8 +13,8 @@ public class Miner extends Thread{
     private ArrayList<SolverThread> threads = new ArrayList<>();
     private Block lastBlock;
     private Server server;
-    public AtomicBoolean lastBlockIsOurs;
     public AtomicBoolean blockchainChanged;
+    private int wallet;
 
 
     public Miner(int maxThreads, Server server){
@@ -30,8 +30,7 @@ public class Miner extends Thread{
             return;
         }
         byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
-        int wallet = Utils.bytesToInt(nameSig);
-        this.lastBlockIsOurs = new AtomicBoolean(lastBlock.getWallet() == wallet);
+        wallet = Utils.bytesToInt(nameSig);
         //done!
 
         this.blockchainChanged = new AtomicBoolean(false);
@@ -56,8 +55,17 @@ public class Miner extends Thread{
         }
         threads.clear();
         //wait until next block is mined...
-        while (lastBlockIsOurs.get()) {
+        while (!blockchainChanged.get()) {
             try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
+            }
+        }
+        // just to make sure, shouldnt get HERE!
+        while (lastBlock.getWallet() == wallet){
+            try {
+                System.out.println("[!] ERROR blockchain updated but last block still ours");
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
@@ -75,7 +83,7 @@ public class Miner extends Thread{
     @Override
     public void run() {
 
-        while (lastBlockIsOurs.get()) {
+        while ((lastBlock = Database.getLatestBlock()).getWallet() == wallet) { //TODO needs checking
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -141,20 +149,14 @@ public class Miner extends Thread{
 
             byte[] puzzle = new byte[8];
             Outer:
-            while (this.alive.get()) {
+            //in every iteration, check if you need to mine or not.
+            while (this.alive.get() && (lastBlock = Database.getLatestBlock()).getWallet() == wallet) {
 //                ++tries;
 //                if (tries % 1000000 == 0){
 //                    System.out.println("1000000 tries on " + this.toString());
 //                    tries = 0;
 //                }
 
-                while (lastBlockIsOurs.get()) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
-                    }
-                }
                 generator.nextBytes(puzzle);
                 Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 byte[] hash;
