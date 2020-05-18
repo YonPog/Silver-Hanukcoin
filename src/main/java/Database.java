@@ -79,8 +79,9 @@ public class Database {
             BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
             if (i < collection.count() && collection.find(query).limit(1).first() != null) {
                 collection.findOneAndReplace(query, doc);
-            } else {
-                collection.insertOne(doc);
+            } else {                
+                if (collection.find(query).limit(1).first() != null)
+                    collection.insertOne(doc);
             }
         }
         System.out.println("[*] done!");
