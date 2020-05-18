@@ -156,7 +156,7 @@ public class Miner extends Thread{
                 }
 
                 // if we got here, it means the blockchain changed. if its because we mined, wait until another block arrives
-
+                System.out.println("[*] blockchain changed, waiting to mine next next block");
                 while (lastBlockIsOurs.get()){
                     try {
                         Thread.sleep(1000);

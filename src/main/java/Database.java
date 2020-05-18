@@ -36,9 +36,10 @@ public class Database {
 //         collection.deleteMany(blank);
 
         // If the database was wiped and we need to upload the blockchain
-//        update_wallet_pairs_names();
+        update_wallet_pairs_names();
         // Uncomment to print wallet_pairs_names keys and values
         // wallet_pairs_names.forEach((k,v)-> System.out.println("key: "+k+", value: "+v));
+        //uncomment to reset mongodb to local blocks
 //         for (int i = 0; i < blockchain.size(); ++i) {
 //             Block block = blockchain.get(i);
 //             collection.insertOne( block.toDocument()
@@ -76,7 +77,7 @@ public class Database {
                     .append("wallet_name", wallet_pairs_names.get(block.getWallet()));
 
             BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
-            if (i < blockchain.size() && collection.find(query).limit(1).first() != null) {
+            if (i < collection.count() && collection.find(query).limit(1).first() != null) {
                 collection.findOneAndReplace(query, doc);
             } else {
                 collection.insertOne(doc);
