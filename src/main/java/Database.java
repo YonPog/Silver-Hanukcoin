@@ -33,18 +33,18 @@ public class Database {
         collection = database.getCollection("blockchain");
 
         // If you'd like to empty mongodb, uncomment those lines
-//        BasicDBObject blank = new BasicDBObject();
-//        collection.deleteMany(blank);
+        BasicDBObject blank = new BasicDBObject();
+        collection.deleteMany(blank);
 
         // If the database was wiped and we need to upload the blockchain
-//        update_wallet_pairs_names();
+        update_wallet_pairs_names();
         // Uncomment to print wallet_pairs_names keys and values
         // wallet_pairs_names.forEach((k,v)-> System.out.println("key: "+k+", value: "+v));
-//         for (int i = 0; i < blockchain.size(); ++i) {
-//            Block block = blockchain.get(i);
-//            collection.insertOne( block.toDocument()
-//                    .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
-//        }
+         for (int i = 0; i < blockchain.size(); ++i) {
+            Block block = blockchain.get(i);
+            collection.insertOne( block.toDocument()
+                    .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
+        }
         saveToMongoDB((int) collection.count());
     }
 
@@ -63,11 +63,11 @@ public class Database {
             int wallet = Utils.bytesToInt(nameSig);
             wallet_pairs_names.putIfAbsent(wallet, node.getName());
         }
-        wallet_pairs_names.putIfAbsent(660819960, "0X27634ff8");
-        wallet_pairs_names.putIfAbsent(1371098273, "0X27634ff8");
-        wallet_pairs_names.putIfAbsent(-1696924359, "0X27634ff8");
-        wallet_pairs_names.putIfAbsent(-1518554570, "￿Silver");
-        wallet_pairs_names.putIfAbsent(-110218145, "Silver");
+//        wallet_pairs_names.putIfAbsent(660819960, "0X27634ff8");
+//        wallet_pairs_names.putIfAbsent(1371098273, "0X27634ff8");
+//        wallet_pairs_names.putIfAbsent(-1696924359, "0X27634ff8");
+//        wallet_pairs_names.putIfAbsent(-1518554570, "￿Silver");
+//        wallet_pairs_names.putIfAbsent(-110218145, "Copper");
     }
 
     public static void saveToMongoDB(int oldBlockLength) {
