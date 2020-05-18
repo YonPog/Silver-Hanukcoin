@@ -22,7 +22,7 @@ public class Server {
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
-        this.miner = new Miner(5, this);
+        this.miner = new Miner(2, this);
 
         // Add this host (ourselves)
         Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
@@ -363,7 +363,7 @@ public class Server {
         ArrayList<Node> toAdd = chooseNodes(map);
         sendQueue.addAll(toAdd);
         //TODO temporary until we can trust the network
-        Node backup = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch());
+        Node backup = new Node("Silver", "85.65.31.137", 34715, getCurrentEpoch());
         sendQueue.add(backup);
     }
 

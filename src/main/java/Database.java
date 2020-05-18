@@ -5,6 +5,7 @@ import javafx.util.Pair;
 import org.bson.Document;
 
 import java.io.*;
+import java.nio.channels.Channels;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -154,10 +155,29 @@ public class Database {
      * Saves the blocks to the file.
      */
     public static void saveBlockchain() throws IOException {
-        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
+//        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
+//        int oldBlocks = blocksInFile;
+//        for (int i = oldBlocks; i < blockchain.size(); ++i) {
+//            writeStream.write(blockchain.get(i).toBytes());
+//        }
+//        blocksInFile = blockchain.size();
+
+        RandomAccessFile file = new RandomAccessFile("blocks.Silver", "rw");
+        long len = file.length();
+        int currIndex = (int) (len / 36); // number of blocks, starting with one more
+        file.seek(len - 1 - 36);
+        Block lastCommon;
+        do {
+            lastCommon = Block.parseBlock(new DataInputStream(Channels.newInputStream(file.getChannel())));
+            currIndex--;
+            file.seek(file.getFilePointer() - (2 * 36));
+
+        } while (lastCommon.equals(blockchain.get(currIndex)));
+
         int oldBlocks = blocksInFile;
-        for (int i = oldBlocks; i < blockchain.size(); ++i) {
-            writeStream.write(blockchain.get(i).toBytes());
+        file.seek(file.length());
+        for (int i = currIndex + 1; i < blockchain.size(); ++i) {
+            file.write(blockchain.get(i).toBytes());
         }
         blocksInFile = blockchain.size();
 
