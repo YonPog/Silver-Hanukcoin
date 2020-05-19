@@ -32,7 +32,7 @@ public class Database {
         collection = database.getCollection("blockchain");
 
         // If you'd like to empty mongodb, uncomment those lines
-//         BasicDBObject blank = new BasicDBObject();
+//        BasicDBObject blank = new BasicDBObject();
 //         collection.deleteMany(blank);
 
         // If the database was wiped and we need to upload the blockchain
@@ -79,9 +79,10 @@ public class Database {
             BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
             if (i < collection.count() && collection.find(query).limit(1).first() != null) {
                 collection.findOneAndReplace(query, doc);
-            } else {                
-                if (collection.find(query).limit(1).first() != null)
+            } else {
+                if (collection.find(query).limit(1).first() == null) {
                     collection.insertOne(doc);
+                }
             }
         }
         System.out.println("[*] done!");
@@ -104,7 +105,7 @@ public class Database {
 
     public static void wipe() throws IOException {
         DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
-        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
+        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00   54 45 53 54  5F 52 30 32   A8 F5 DA 01  49 47 DF C1   F7 45 41 20  32 F2 88 C9   D8 22 0D CB ");
         writeStream.write(bytes);
         blocksInFile = 1;
     }
@@ -156,15 +157,14 @@ public class Database {
      * Saves the blocks to the file.
      */
     public static void saveBlockchain() throws IOException {
-        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
-        int oldBlocks = blocksInFile;
-        for (int i = oldBlocks; i < blockchain.size(); ++i) {
+        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
+        for (int i = 0; i < blockchain.size(); ++i) {
             writeStream.write(blockchain.get(i).toBytes());
         }
         blocksInFile = blockchain.size();
 
         // TODO
-        saveToMongoDB(oldBlocks);
+        //saveToMongoDB(oldBlocks);
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {
