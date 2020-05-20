@@ -262,6 +262,11 @@ public class Database {
                 return false;
             }
 
+            //check if prev sig matches up
+            if (!Arrays.equals(Arrays.copyOfRange(newBlockchain.get(i-1).getSig(), 0, 8), newBlock.getPrev_sig())){
+                return false;
+            }
+
             //check if signature matches up
             if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
                 // TODO temporary, for debugging purposes
@@ -269,6 +274,7 @@ public class Database {
                 System.out.println(Arrays.toString(newBlock.calcMD5()));
                 return false;
             }
+
 
             //check if puzzle is solved
             int index = 15; //iterating from end to start

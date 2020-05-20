@@ -22,7 +22,7 @@ public class Server {
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
-        this.miner = new Miner(2, this);
+        this.miner = new Miner(8, this);
 
         // Add this host (ourselves)
         Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
@@ -31,7 +31,13 @@ public class Server {
 
         // TODO temporary - change to a dynamic first node (maybe reading from db)
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
+        Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch()); //blass
+        Node backup2 = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch()); //yon
         Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
+        Database.setNode(new Pair<>(backup1.getHost(), backup1.getPort()), backup1);
+        Database.setNode(new Pair<>(backup2.getHost(), backup2.getPort()), backup2);
+
+
         System.out.format("[*] Successfully initialized server on %s:%d\n", HOST, PORT);
     }
 
@@ -363,8 +369,12 @@ public class Server {
         ArrayList<Node> toAdd = chooseNodes(map);
         sendQueue.addAll(toAdd);
         //TODO temporary until we can trust the network
-        Node backup = new Node("Silver", "85.65.31.137", 34715, getCurrentEpoch());
-        sendQueue.add(backup);
+        Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch()); //blass
+        Node backup2 = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch()); //yon
+        Node backup3 = new Node("Copper", "copper-coin.3utilities.com", 42069, getCurrentEpoch());
+        //sendQueue.add(backup1);
+        sendQueue.add(backup2);
+        sendQueue.add(backup3);
     }
 
     /**
