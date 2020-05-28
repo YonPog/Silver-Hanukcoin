@@ -25,6 +25,10 @@ public class Connection {
         return msg;
     }
 
+    public void close() throws IOException {
+        this.socket.close();
+    }
+
     public Socket getSocket() {
         return socket;
     }
