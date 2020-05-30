@@ -1,6 +1,7 @@
 import com.mongodb.*;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.util.Pair;
 import org.bson.Document;
 
@@ -124,11 +125,14 @@ public class Database {
     }
 
     public static void loadNodeList() throws Exception {
-        DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));
-        ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
-        // fill up node list
-        for (Node n : nodeList) {
-            nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
+        try (DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));) {
+            ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
+            // fill up node list
+            for (Node n : nodeList) {
+                nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
+            }
+        } catch (IOException e) {
+            System.out.format("[!] ERROR reading node list.\nDetails:\n%s", e.toString());
         }
 
     }
@@ -136,32 +140,42 @@ public class Database {
     /**
      * Saves the nodes to the file.
      */
-    public static void saveNodeList() throws IOException {
-        DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));
-        ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
-        Message msg = new Message(1, nodeList, new ArrayList<Block>());
-        stream.write(msg.toBytes());
+    public static void saveNodeList() {
+        try (DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));) {
+            ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
+            Message msg = new Message(1, nodeList, new ArrayList<Block>());
+            stream.write(msg.toBytes());
+        } catch (IOException e) {
+            System.out.format("[!] ERROR saving node list.\nDetails:\n%s", e.toString());
+        }
     }
 
     public static void loadBlockchain() throws IOException {
-        DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
-        int numblocks = 0;
-        while (stream.available() > 0) {
-            blockchain.add(Block.parseBlock(stream));
-            ++numblocks;
+        try (DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));) {
+            int numblocks = 0;
+            while (stream.available() > 0) {
+                blockchain.add(Block.parseBlock(stream));
+                ++numblocks;
+            }
+            blocksInFile = numblocks;
+        } catch (IOException e) {
+            System.out.format("[!] ERROR reading blockchain.\nDetails:\n%s", e.toString());
         }
-        blocksInFile = numblocks;
     }
 
     /**
      * Saves the blocks to the file.
      */
     public static void saveBlockchain() throws IOException {
-        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
-        for (int i = 0; i < blockchain.size(); ++i) {
-            writeStream.write(blockchain.get(i).toBytes());
+        try (DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));) {
+
+            for (Block block : blockchain) {
+                writeStream.write(block.toBytes());
+            }
+            blocksInFile = blockchain.size();
+        } catch (IOException e) {
+            System.out.format("[!] ERROR saving blockchain.\nDetails:\n%s", e.toString());
         }
-        blocksInFile = blockchain.size();
 
         // TODO
         //saveToMongoDB(oldBlocks);
