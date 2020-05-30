@@ -68,10 +68,16 @@ public class Database {
     public static void saveToMongoDB(int oldBlockLength) {
         System.out.println("[*] saving to MongoDB");
 
-        int oldBlocks = blocksInFile;
+
+        //TODO empty mongodb?
+
+//         BasicDBObject blank = new BasicDBObject();
+//         collection.deleteMany(blank);
+
+        int oldBlocks = oldBlockLength;
         update_wallet_pairs_names();
 
-        for (int i = oldBlockLength; i < blockchain.size(); ++i) {
+        for (int i = oldBlocks; i < blockchain.size(); ++i) {
             Block block = blockchain.get(i);
             Document doc = block.toDocument()
                     .append("wallet_name", wallet_pairs_names.get(block.getWallet()));
@@ -166,7 +172,10 @@ public class Database {
      * Saves the blocks to the file.
      */
     public static void saveBlockchain() throws IOException {
-        try (DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));) {
+        // TODO
+        saveToMongoDB(blocksInFile);
+
+        try (DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE))) {
 
             for (Block block : blockchain) {
                 writeStream.write(block.toBytes());
@@ -176,8 +185,6 @@ public class Database {
             System.out.format("[!] ERROR saving blockchain.\nDetails:\n%s", e.toString());
         }
 
-        // TODO
-        //saveToMongoDB(oldBlocks);
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {

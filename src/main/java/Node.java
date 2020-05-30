@@ -1,5 +1,7 @@
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 
 public class Node {
     private String name;
@@ -69,6 +71,12 @@ public class Node {
 
     @Override
     public String toString(){
-        return String.format("<Node %s on %s:%d, last seen %d, is new: %b>\n", this.name, this.host, this.port, this.last_seen_ts, this.isNew);
+        return String.format("<Node %s on %s:%d, last seen %s, is new: %b>\n", this.name, this.host, this.port, getDateString(), this.isNew);
+    }
+
+    public String getDateString(){
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm dd/MM");
+        long ts = this.last_seen_ts;
+        return sdf.format(new Date(ts * 1000));
     }
 }
