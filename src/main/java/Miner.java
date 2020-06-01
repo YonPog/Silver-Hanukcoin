@@ -127,13 +127,18 @@ public class Miner extends Thread{
                 int serial = lastBlock.getSerial_number() + 1;
                 byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
                 byte[] puzzle = new byte[8];
-
+                Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 // start mining
                 Outer:
                 //in every iteration, check if there is a change in the blockchain
                 while (!blockchainChanged.get()) {
-                    generator.nextBytes(puzzle);
-                    Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
+                    generator.nextBytes(puzzle); //is mutable so b.puzzle changes
+                    //update b
+                    b.setSerial_number(serial);
+                    b.setWallet(wallet);
+                    b.setPrev_sig(prevSig);
+
+
                     byte[] hash;
                     try {
                         hash = b.calcMD5();

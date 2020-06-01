@@ -222,10 +222,50 @@ public class Database {
     public static int getBlockchainLength() { return blockchain.size(); }
 
     public static boolean isValidContinuation(Block newBlock) throws NoSuchAlgorithmException {
-        ArrayList<Block> newBlockchain = new ArrayList<>(blockchain);
-        newBlockchain.add(newBlock);
-        return isUpdateNeeded(newBlockchain);
 
+        byte[] digest = newBlock.calcMD5();
+
+        //check if serial number is one more than previous one
+        if (newBlock.getSerial_number() != getLatestBlock().getSerial_number() + 1) {
+            return false;
+        }
+
+        //check if wallet number is different than the last one
+        if (newBlock.getWallet() == getLatestBlock().getWallet()) {
+            return false;
+        }
+
+        //check if prev sig matches up
+        if (!Arrays.equals(Arrays.copyOfRange(getLatestBlock().getSig(), 0, 8), newBlock.getPrev_sig())){
+            return false;
+        }
+
+        //check if signature matches up
+        if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
+            // TODO temporary, for debugging purposes
+            System.out.println(Arrays.toString(newBlock.toBytes()));
+            System.out.println(Arrays.toString(newBlock.calcMD5()));
+            return false;
+        }
+
+
+        //check if puzzle is solved
+        int index = 15; //iterating from end to start
+        int numZerosToCheck = newBlock.calcNZ();
+        while (numZerosToCheck >= 8) {
+            if (digest[index] != 0) {
+                return false;
+            }
+            --index;
+            numZerosToCheck -= 8;
+        }
+
+        //there are less than 8 bits to check
+        if (numZerosToCheck > 0) { //there are bits left
+            //mask
+            return (digest[index] & ((1 << numZerosToCheck) - 1)) == 0;
+        }
+        return true;
     }
 
     public static boolean isUpdateNeeded(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException {
