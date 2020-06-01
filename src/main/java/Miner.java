@@ -16,6 +16,8 @@ public class Miner extends Thread{
     public AtomicBoolean blockchainChanged;
     public AtomicBoolean lastBlockIsOurs;
     private int wallet;
+    private final String ALT_NAME = "Silver2"; //TODO replace
+    private String currName;
 
 
     public Miner(int maxThreads, Server server){
@@ -54,16 +56,34 @@ public class Miner extends Thread{
         return wallet == lastBlock.getWallet();
     }
 
+    private int genWallet(String name){
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+            return 0; //shouldnt get here..
+        }
+
+        byte[] nameSig = Arrays.copyOfRange(md5.digest(name.getBytes()), 0, 4);
+        return Utils.bytesToInt(nameSig);
+    }
+
+    private void updateWallet(){
+        if (!lastBlockIsOurs.get()){
+            wallet = genWallet(Main.NAME);
+            currName = Main.NAME;
+            System.out.println("[*] current wallet is " + Main.NAME);
+        } else {
+            wallet = genWallet(ALT_NAME);
+            currName = ALT_NAME;
+            System.out.println("[*] current wallet is " + ALT_NAME);
+        }
+    }
     @Override
     public void run() {
 
-        while ((lastBlock = Database.getLatestBlock()).getWallet() == wallet) { //TODO needs checking
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
-            }
-        }
+        updateWallet();
 
         System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
         for (SolverThread st : threads){
@@ -83,6 +103,7 @@ public class Miner extends Thread{
                 System.out.println("[*] Started mining a new block: " + lastBlock.toString());
                 lastBlock = Database.getLatestBlock();
                 lastBlockIsOurs.set(isOurs(lastBlock));
+                updateWallet();
             }
 
         }
@@ -97,13 +118,6 @@ public class Miner extends Thread{
 
         @Override
         public void run() {
-            MessageDigest md5;
-            try {
-                md5 = MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException e) {
-                System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
-                return;
-            }
             Random generator = new Random(seed);
 
             while (true){
@@ -111,8 +125,6 @@ public class Miner extends Thread{
                 System.out.println("[*] Refreshed miner " + this.toString() + " and started mining #" + lastBlock.getSerial_number());
 
                 int serial = lastBlock.getSerial_number() + 1;
-                byte[] nameSig = Arrays.copyOfRange(md5.digest(Main.NAME.getBytes()), 0, 4);
-                int wallet = Utils.bytesToInt(nameSig);
                 byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
                 byte[] puzzle = new byte[8];
 
@@ -120,11 +132,6 @@ public class Miner extends Thread{
                 Outer:
                 //in every iteration, check if there is a change in the blockchain
                 while (!blockchainChanged.get()) {
-//                ++tries;
-//                if (tries % 1000000 == 0){
-//                    System.out.println("1000000 tries on " + this.toString());
-//                    tries = 0;
-//                }
                     generator.nextBytes(puzzle);
                     Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                     byte[] hash;
@@ -156,14 +163,7 @@ public class Miner extends Thread{
                 }
 
                 // if we got here, it means the blockchain changed. if its because we mined, wait until another block arrives
-                System.out.println("[*] blockchain changed, waiting to mine next next block");
-                while (lastBlockIsOurs.get()){
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        System.out.println("[!] ERROR waiting\nDetails:\n" + e.toString() + "\n");
-                    }
-                }
+                System.out.println("[*] blockchain changed...");
 
             }
         }
