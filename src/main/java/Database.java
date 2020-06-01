@@ -45,7 +45,7 @@ public class Database {
 //             collection.insertOne( block.toDocument()
 //                     .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
 //         }
-        saveToMongoDB((int) collection.count());
+        //saveToMongoDB((int) collection.count());
     }
 
     private static void update_wallet_pairs_names() {
@@ -173,7 +173,7 @@ public class Database {
      */
     public static void saveBlockchain() throws IOException {
         // TODO
-        saveToMongoDB(blocksInFile);
+        //saveToMongoDB(blocksInFile);
 
         try (DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE))) {
 
