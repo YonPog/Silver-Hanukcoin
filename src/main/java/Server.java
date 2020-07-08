@@ -23,7 +23,7 @@ public class Server {
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
-        this.miner = new Miner(8, this);
+        this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
         Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());

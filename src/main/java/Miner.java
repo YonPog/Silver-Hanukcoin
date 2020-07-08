@@ -16,8 +16,8 @@ public class Miner extends Thread{
     public AtomicBoolean blockchainChanged;
     public AtomicBoolean lastBlockIsOurs;
     private int wallet;
+    private Block defaultBlock;
     private final String ALT_NAME = "Silver2"; //TODO replace
-    private String currName;
 
 
     public Miner(int maxThreads, Server server){
@@ -29,8 +29,9 @@ public class Miner extends Thread{
         //done!
 
         this.blockchainChanged = new AtomicBoolean(false);
+        Random r = new Random();
         for (int i = 0; i < maxThreads; ++i) {
-            SolverThread st = new SolverThread(i); // make sure serial number seeds are ok.
+            SolverThread st = new SolverThread(r.nextInt());
             threads.add(st);
         }
     }
@@ -72,18 +73,26 @@ public class Miner extends Thread{
     private void updateWallet(){
         if (!lastBlockIsOurs.get()){
             wallet = genWallet(Main.NAME);
-            currName = Main.NAME;
             System.out.println("[*] current wallet is " + Main.NAME);
         } else {
             wallet = genWallet(ALT_NAME);
-            currName = ALT_NAME;
             System.out.println("[*] current wallet is " + ALT_NAME);
         }
     }
+
+    private void updateBlock(){
+        updateWallet();
+        int serial = lastBlock.getSerial_number() + 1;
+        byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
+        byte[] puzzle = new byte[8];
+        defaultBlock = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
+
+    }
+
     @Override
     public void run() {
 
-        updateWallet();
+        updateBlock();
 
         System.out.println("[*] initialized miner and started mining on new block: " + lastBlock.toString());
         for (SolverThread st : threads){
@@ -100,10 +109,16 @@ public class Miner extends Thread{
 
             //check if blockchain changed
             if (blockchainChanged.compareAndSet(true, false)) {
+                //update block data
+                updateBlock();
+                //update threads
+                for (SolverThread t : threads){
+                    t.threadChange.set(true);
+                }
+
                 System.out.println("[*] Started mining a new block: " + lastBlock.toString());
                 lastBlock = Database.getLatestBlock();
                 lastBlockIsOurs.set(isOurs(lastBlock));
-                updateWallet();
             }
 
         }
@@ -111,6 +126,7 @@ public class Miner extends Thread{
 
     private class SolverThread extends Thread{
         private final long seed;
+        private AtomicBoolean threadChange = new AtomicBoolean(false);
 
         public SolverThread(long seed){
             this.seed = seed;
@@ -124,20 +140,19 @@ public class Miner extends Thread{
                 // generate new goals
                 System.out.println("[*] Refreshed miner " + this.toString() + " and started mining #" + lastBlock.getSerial_number());
 
-                int serial = lastBlock.getSerial_number() + 1;
-                byte[] prevSig = Arrays.copyOfRange(lastBlock.getSig(), 0, 8);
+                Block b = defaultBlock.clone();
+                int serial = b.getSerial_number();
+                byte[] prevSig = b.getPrev_sig();
                 byte[] puzzle = new byte[8];
-                Block b = new Block(serial, wallet, prevSig, puzzle, new byte[12]);
                 // start mining
                 Outer:
                 //in every iteration, check if there is a change in the blockchain
-                while (!blockchainChanged.get()) {
+                while (!threadChange.compareAndSet(true, false)) {
                     generator.nextBytes(puzzle); //is mutable so b.puzzle changes
                     //update b
                     b.setSerial_number(serial);
                     b.setWallet(wallet);
                     b.setPrev_sig(prevSig);
-
 
                     byte[] hash;
                     try {
@@ -164,6 +179,7 @@ public class Miner extends Thread{
                     }
                     b.setSig(Arrays.copyOfRange(hash, 0, 12));
                     solutions.add(b);
+                    System.out.println("Handed in a candidate for a new block...");
                     break;
                 }
 

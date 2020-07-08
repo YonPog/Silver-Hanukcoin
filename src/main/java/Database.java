@@ -111,7 +111,12 @@ public class Database {
 
     public static void wipe() throws IOException {
         DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
-        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00   54 45 53 54  5F 52 30 32   A8 F5 DA 01  49 47 DF C1   F7 45 41 20  32 F2 88 C9   D8 22 0D CB ");
+        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00  \n" +
+                "54 45 53 54  5F 52 30 33  \n" +
+                "10 CB A5 5D  35 54 EB B1  \n" +
+                "D1 68 89 8E  DF 59 97 45  \n" +
+                "68 F7 64 5F \n");
+
         writeStream.write(bytes);
         blocksInFile = 1;
     }
@@ -171,7 +176,7 @@ public class Database {
     /**
      * Saves the blocks to the file.
      */
-    public static void saveBlockchain() throws IOException {
+    public static void saveBlockchain() {
         // TODO
         //saveToMongoDB(blocksInFile);
 

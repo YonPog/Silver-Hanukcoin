@@ -132,4 +132,9 @@ public class Block {
                 .append("bin", new Binary(this.toBytes()));
     }
 
+
+    public Block clone(){
+        return new Block(this.serial_number, this.wallet, this.prev_sig, this.puzzle, this.sig);
+    }
+
 }
