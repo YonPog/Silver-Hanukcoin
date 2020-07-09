@@ -21,6 +21,7 @@ public class Connection {
         try{
             DataInputStream stream = new DataInputStream(socket.getInputStream());
             Message msg = new MessageParser(stream).toMessage();
+
             System.out.format("[*] ------ got new message from %s:%d ------\n", socket.getInetAddress(), socket.getPort());
             System.out.println(msg.toString(true));
             return msg;
