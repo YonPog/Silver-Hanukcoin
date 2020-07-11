@@ -117,6 +117,8 @@ public class Database {
                 "D1 68 89 8E  DF 59 97 45  \n" +
                 "68 F7 64 5F \n");
 
+//        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
+
         writeStream.write(bytes);
         blocksInFile = 1;
     }
@@ -290,11 +292,11 @@ public class Database {
         }
         //find until where the chains add up
         int lastCommon = findLastCommonBlock(newBlockchain);
-        System.out.println("last common block " + blockchain.get(lastCommon));
         if (lastCommon < 0){
             System.out.println("wrong genesis");
             return false; //wrong genesis
         }
+        System.out.println("last common block " + blockchain.get(lastCommon));
 
         if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
             System.out.println("chose one because puzzle shorter");

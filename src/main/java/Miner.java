@@ -17,7 +17,7 @@ public class Miner extends Thread{
     public AtomicBoolean lastBlockIsOurs;
     private int wallet;
     private Block defaultBlock;
-    private final String ALT_NAME = "Silver2"; //TODO replace
+    private final String ALT_NAME = "Silver"; //TODO replace
 
 
     public Miner(int maxThreads, Server server){
@@ -38,7 +38,7 @@ public class Miner extends Thread{
 
     public void updateBlock(Block newBlock){
         if (newBlock.getSerial_number() > lastBlock.getSerial_number()){
-            lastBlock = newBlock;
+            lastBlock = newBlock.clone();
             blockchainChanged.set(true);
             lastBlockIsOurs.set(isOurs(newBlock));
         }
@@ -109,16 +109,16 @@ public class Miner extends Thread{
 
             //check if blockchain changed
             if (blockchainChanged.compareAndSet(true, false)) {
-                //update block data
-                updateBlock();
-                //update threads
-                for (SolverThread t : threads){
-                    t.threadChange.set(true);
-                }
-
                 System.out.println("[*] Started mining a new block: " + lastBlock.toString());
                 lastBlock = Database.getLatestBlock();
                 lastBlockIsOurs.set(isOurs(lastBlock));
+                //update block data
+                updateBlock();
+
+                //update threads
+                for (SolverThread t : threads) {
+                    t.threadChange.set(true);
+                }
             }
 
         }
@@ -153,6 +153,7 @@ public class Miner extends Thread{
                     b.setSerial_number(serial);
                     b.setWallet(wallet);
                     b.setPrev_sig(prevSig);
+                    b.setPuzzle(puzzle);
 
                     byte[] hash;
                     try {

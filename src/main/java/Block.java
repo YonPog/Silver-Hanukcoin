@@ -134,7 +134,8 @@ public class Block {
 
 
     public Block clone(){
-        return new Block(this.serial_number, this.wallet, this.prev_sig, this.puzzle, this.sig);
+        return new Block(this.serial_number, this.wallet, Arrays.copyOf(this.prev_sig, 8), Arrays.copyOf(this.puzzle,
+                8), Arrays.copyOf(this.sig, 12));
     }
 
 }

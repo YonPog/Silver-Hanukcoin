@@ -28,7 +28,7 @@ public class Connection {
         catch (Exception e){
             System.out.format("[!] ------ failed to parse message from %s:%d ------\n", socket.getInetAddress(), socket.getPort());
             System.out.format("Details: \n%s\n", e.toString());
-            throw new Exception();
+            throw new IOException();
         }
     }
 
