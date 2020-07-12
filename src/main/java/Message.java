@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Message {
     private final int cmd;
@@ -91,7 +92,7 @@ public class Message {
             }
             ret.append(String.format("\nand %d blocks...\n", this.blocks.size()));
 //            for (Block b : this.blocks){
-//                String msg = "\t" + b.toString();
+//                String msg = "\t" + Arrays.toString(b.toBytes());
 //                ret.append(msg);
 //            }
             return ret.toString();

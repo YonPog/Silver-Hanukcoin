@@ -112,10 +112,10 @@ public class Database {
     public static void wipe() throws IOException {
         DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
         byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00  \n" +
-                "54 45 53 54  5F 52 30 33  \n" +
-                "10 CB A5 5D  35 54 EB B1  \n" +
-                "D1 68 89 8E  DF 59 97 45  \n" +
-                "68 F7 64 5F \n");
+                "43 4F 4E 54  45 53 54 30  \n" +
+                "6C E4 BA AA  70 1C E0 FC  \n" +
+                "4B 72 9D 93  A2 28 FB 27  \n" +
+                "4D 11 E7 25 ");
 
 //        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
 
@@ -209,15 +209,16 @@ public class Database {
         return 2;
     }
 
-    public static void update(Block newBlock) throws IOException, NoSuchAlgorithmException {
+    public static boolean update(Block newBlock) throws IOException, NoSuchAlgorithmException {
         System.out.println(Arrays.toString(newBlock.toBytes()));
         if (!isValidContinuation(newBlock)){
             System.out.println("[!] -------------------------------------------------WRONG!");
-            return;
+            return false;
         }
         blockchain.add(newBlock);
         saveBlockchain();
         System.out.println("[*] Mined a new block!");
+        return true;
     }
 
     public static ArrayList<Block> getBlocks() {
@@ -250,8 +251,6 @@ public class Database {
         //check if signature matches up
         if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
             // TODO temporary, for debugging purposes
-            System.out.println(Arrays.toString(newBlock.toBytes()));
-            System.out.println(Arrays.toString(newBlock.calcMD5()));
             return false;
         }
 
@@ -290,6 +289,7 @@ public class Database {
         if (newBlockchain.size() < blockchain.size()) {
             return false;
         }
+
         //find until where the chains add up
         int lastCommon = findLastCommonBlock(newBlockchain);
         if (lastCommon < 0){
@@ -298,6 +298,7 @@ public class Database {
         }
         System.out.println("last common block " + blockchain.get(lastCommon));
 
+        System.out.println("last common block " + blockchain.get(lastCommon));
         if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
             System.out.println("chose one because puzzle shorter");
             Block currLast = blockchain.get(blockchain.size() - 1);

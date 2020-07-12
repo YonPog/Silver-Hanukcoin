@@ -23,7 +23,7 @@ public class Server {
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
-        this.miner = new Miner(8, this);
+        this.miner = new Miner(5, this);
 
         // Add this host (ourselves)
         Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
@@ -31,12 +31,14 @@ public class Server {
         Database.setNode(new Pair<>(host, port), self);
 
         // TODO temporary - change to a dynamic first node (maybe reading from db)
-        Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
-        //Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch());
-        Node backup2 = new Node("Silver", "85.65.31.137", 34715, getCurrentEpoch());
-        Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
-        //Database.setNode(new Pair<>(backup1.getHost(), backup1.getPort()), backup1);
+        Node backup1 = new Node("Lead", "85.64.90.214", 10084, getCurrentEpoch()); //lead
+        Node backup2 = new Node("IgorComputers", "82.81.206.242", 1337, getCurrentEpoch()); //yon
+        Node backup3 = new Node("Lead", "80.179.243.230", 2005, getCurrentEpoch()); //lead
+        Node backup4 = new Node("HP", "80.179.243.230", 2005, getCurrentEpoch()); //ziv
+        Database.setNode(new Pair<>(backup1.getHost(), backup1.getPort()), backup1);
         Database.setNode(new Pair<>(backup2.getHost(), backup2.getPort()), backup2);
+        Database.setNode(new Pair<>(backup3.getHost(), backup3.getPort()), backup3);
+        //Database.setNode(new Pair<>(backup4.getHost(), backup4.getPort()), backup4);
 
 
         System.out.format("[*] Successfully initialized server on %s:%d\n", HOST, PORT);
@@ -316,10 +318,11 @@ public class Server {
     public void parseSolvedPuzzle(Block nextBlock){
         System.out.println("Parsing solved puzzle");
         try {
-            Database.update(nextBlock);
-            miner.updateBlock(nextBlock);
-            lastChange[0] = getCurrentEpoch();
-            addNodesToSend(Database.getNodes());
+            if (Database.update(nextBlock)){
+                miner.updateBlock(nextBlock);
+                lastChange[0] = getCurrentEpoch();
+                addNodesToSend(Database.getNodes());
+            }
 
         } catch (IOException | NoSuchAlgorithmException e) {
             System.out.format("[!] ERROR parsing new block");
@@ -375,14 +378,16 @@ public class Server {
      * @param map       The HashMap of the nodes
      */
     public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
-        ArrayList<Node> toAdd = chooseNodes(map);
-        sendQueue.addAll(toAdd);
+//       ArrayList<Node> toAdd = chooseNodes(map);
+//        sendQueue.addAll(toAdd);
         //TODO temporary until we can trust the network
-        Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch());
-        Node backup2 = new Node("Silver", "85.65.31.137", 34715, getCurrentEpoch());
-        Node backup3 = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
-        //sendQueue.add(backup1);
-        //sendQueue.add(backup2);
+        Node backup1 = new Node("Lead", "85.64.90.214", 10084, getCurrentEpoch()); //lead
+        Node backup2 = new Node("IgorComputers", "82.81.206.242", 1337, getCurrentEpoch()); //yon
+        Node backup3 = new Node("Lead", "80.179.243.230", 2005, getCurrentEpoch()); //lead
+        //Node backup4 = new Node("HP", "80.179.243.230", 2005, getCurrentEpoch()); //ziv
+
+        sendQueue.add(backup1);
+        sendQueue.add(backup2);
         sendQueue.add(backup3);
     }
 
