@@ -1,10 +1,11 @@
 import com.mongodb.*;
-import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import org.bson.Document;
+import com.mongodb.client.MongoDatabase;
 import javafx.util.Pair;
+import org.bson.Document;
 
 import java.io.*;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,30 +16,80 @@ import java.util.logging.Logger;
 public class Database {
     private static ArrayList<Block> blockchain = new ArrayList<>();
     private static ConcurrentHashMap<Pair<String, Integer>, Node> nodes = new ConcurrentHashMap<>(); //host:port, node
+    private static ConcurrentHashMap<Integer, String> wallet_pairs_names = new ConcurrentHashMap<>(); // Wallet, Node's name
     private static int blocksInFile = 0;
     private static final String NODES_FILE = "nodes.Silver";
     private static final String BLOCKCHAIN_FILE = "blocks.Silver";
 
-    private static DBCollection collection;
+    private static MongoCollection<Document> collection;
 
 
     public static void initMongoDB() {
         Logger mongoLogger = Logger.getLogger("org.mongodb.driver");
         mongoLogger.setLevel(Level.OFF);
-//        MongoClient mongoClient = new MongoClient("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority");
         MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb+srv://Yuval:rq3vX11VmZOR6iho@silver-xb6ug.gcp.mongodb.net/test?retryWrites=true&w=majority"));
-//        MongoDatabase database = mongoClient.getDatabase("Blockchain");
-        DB database = mongoClient.getDB("Blockchain");
-//        collection = database.getCollection("blockchain");
+        MongoDatabase database = mongoClient.getDatabase("Blockchain");
         collection = database.getCollection("blockchain");
+
+        // If you'd like to empty mongodb, uncomment those lines
+//        BasicDBObject blank = new BasicDBObject();
+//         collection.deleteMany(blank);
+
+        // If the database was wiped and we need to upload the blockchain
+        update_wallet_pairs_names();
+        // Uncomment to print wallet_pairs_names keys and values
+        // wallet_pairs_names.forEach((k,v)-> System.out.println("key: "+k+", value: "+v));
+        //uncomment to reset mongodb to local blocks
+//         for (int i = 0; i < blockchain.size(); ++i) {
+//             Block block = blockchain.get(i);
+//             collection.insertOne( block.toDocument()
+//                     .append("wallet_name", wallet_pairs_names.get(block.getWallet())) );
+//         }
+        //saveToMongoDB((int) collection.count());
     }
 
-    public static void saveToMongoDB() {
+    private static void update_wallet_pairs_names() {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR no such algorithm MD5\nDetails:\n%s", e.toString());
+            return;
+        }
+
+        // Block.wallet = first 4 bytes of md5(team_name)
+        for (Node node : nodes.values()) {
+            byte[] nameSig = Arrays.copyOfRange(md5.digest(node.getName().getBytes()), 0, 4);
+            int wallet = Utils.bytesToInt(nameSig);
+            wallet_pairs_names.putIfAbsent(wallet, node.getName());
+        }
+    }
+
+    public static void saveToMongoDB(int oldBlockLength) {
         System.out.println("[*] saving to MongoDB");
-        for (Block b : blockchain) {
-//            collection.insertOne(b.toDocument());
-            DBObject person = new BasicDBObject(b.toDocument());
-            collection.insert(person);
+
+
+        //TODO empty mongodb?
+
+//         BasicDBObject blank = new BasicDBObject();
+//         collection.deleteMany(blank);
+
+        int oldBlocks = oldBlockLength;
+        update_wallet_pairs_names();
+
+        for (int i = oldBlocks; i < blockchain.size(); ++i) {
+            Block block = blockchain.get(i);
+            Document doc = block.toDocument()
+                    .append("wallet_name", wallet_pairs_names.get(block.getWallet()));
+
+            BasicDBObject query = new BasicDBObject("serial_number", String.valueOf(i));
+            if (i < collection.count() && collection.find(query).limit(1).first() != null) {
+                collection.findOneAndReplace(query, doc);
+            } else {
+                if (collection.find(query).limit(1).first() == null) {
+                    collection.insertOne(doc);
+                }
+            }
         }
         System.out.println("[*] done!");
     }
@@ -47,10 +98,22 @@ public class Database {
      * Initializes the data with the saved nodes and blocks.
      */
     public static void init() throws Exception {
+        //byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00    54 45 53 54  5F 42 4C 4B    71 16 8F 29  D9 FE DF F9    BF 3D AE 1F  65 B0 8F 66    AB 2D B5 1E");
+        //DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
+        //writeStream.write(bytes);
+        //blocksInFile = 1;
+
         // TODO
-        initMongoDB();
         loadNodeList();
         loadBlockchain();
+        initMongoDB();
+    }
+
+    public static void wipe() throws IOException {
+        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE));
+        byte[] bytes = Utils.parseByteStr("00 00 00 00  00 00 00 00   54 45 53 54  5F 52 30 32   A8 F5 DA 01  49 47 DF C1   F7 45 41 20  32 F2 88 C9   D8 22 0D CB ");
+        writeStream.write(bytes);
+        blocksInFile = 1;
     }
 
     public static ConcurrentHashMap<Pair<String, Integer>, Node> getNodes() {
@@ -67,11 +130,14 @@ public class Database {
     }
 
     public static void loadNodeList() throws Exception {
-        DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));
-        ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
-        // fill up node list
-        for (Node n : nodeList) {
-            nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
+        try (DataInputStream stream = new DataInputStream(new FileInputStream(NODES_FILE));) {
+            ArrayList<Node> nodeList = new MessageParser(stream).toMessage().getNodes();
+            // fill up node list
+            for (Node n : nodeList) {
+                nodes.put(new Pair<>(n.getHost(), n.getPort()), n);
+            }
+        } catch (IOException e) {
+            System.out.format("[!] ERROR reading node list.\nDetails:\n%s", e.toString());
         }
 
     }
@@ -79,17 +145,26 @@ public class Database {
     /**
      * Saves the nodes to the file.
      */
-    public static void saveNodeList() throws IOException {
-        DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));
-        ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
-        Message msg = new Message(1, nodeList, new ArrayList<Block>());
-        stream.write(msg.toBytes());
+    public static void saveNodeList() {
+        try (DataOutputStream stream = new DataOutputStream(new FileOutputStream(NODES_FILE));) {
+            ArrayList<Node> nodeList = new ArrayList<>(nodes.values());
+            Message msg = new Message(1, nodeList, new ArrayList<Block>());
+            stream.write(msg.toBytes());
+        } catch (IOException e) {
+            System.out.format("[!] ERROR saving node list.\nDetails:\n%s", e.toString());
+        }
     }
 
     public static void loadBlockchain() throws IOException {
-        DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));
-        while (stream.available() > 0) {
-            blockchain.add(Block.parseBlock(stream));
+        try (DataInputStream stream = new DataInputStream(new FileInputStream(BLOCKCHAIN_FILE));) {
+            int numblocks = 0;
+            while (stream.available() > 0) {
+                blockchain.add(Block.parseBlock(stream));
+                ++numblocks;
+            }
+            blocksInFile = numblocks;
+        } catch (IOException e) {
+            System.out.format("[!] ERROR reading blockchain.\nDetails:\n%s", e.toString());
         }
     }
 
@@ -97,15 +172,19 @@ public class Database {
      * Saves the blocks to the file.
      */
     public static void saveBlockchain() throws IOException {
-        DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE, true));
-        int oldBlocks = blocksInFile;
-        for (int i = oldBlocks; i < blockchain.size(); ++i) {
-            writeStream.write(blockchain.get(i).toBytes());
-        }
-        blocksInFile = blockchain.size();
-
         // TODO
-        saveToMongoDB();
+        //saveToMongoDB(blocksInFile);
+
+        try (DataOutputStream writeStream = new DataOutputStream(new FileOutputStream(BLOCKCHAIN_FILE))) {
+
+            for (Block block : blockchain) {
+                writeStream.write(block.toBytes());
+            }
+            blocksInFile = blockchain.size();
+        } catch (IOException e) {
+            System.out.format("[!] ERROR saving blockchain.\nDetails:\n%s", e.toString());
+        }
+
     }
 
     public static int update(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException, IOException {
@@ -123,8 +202,70 @@ public class Database {
         return 2;
     }
 
+    public static void update(Block newBlock) throws IOException, NoSuchAlgorithmException {
+        System.out.println(Arrays.toString(newBlock.toBytes()));
+        if (!isValidContinuation(newBlock)){
+            System.out.println("[!] -------------------------------------------------WRONG!");
+            return;
+        }
+        blockchain.add(newBlock);
+        saveBlockchain();
+        System.out.println("[*] Mined a new block!");
+    }
+
     public static ArrayList<Block> getBlocks() {
         return blockchain;
+    }
+
+    public static Block getLatestBlock() { return blockchain.get(blockchain.size() - 1); }
+
+    public static int getBlockchainLength() { return blockchain.size(); }
+
+    public static boolean isValidContinuation(Block newBlock) throws NoSuchAlgorithmException {
+
+        byte[] digest = newBlock.calcMD5();
+
+        //check if serial number is one more than previous one
+        if (newBlock.getSerial_number() != getLatestBlock().getSerial_number() + 1) {
+            return false;
+        }
+
+        //check if wallet number is different than the last one
+        if (newBlock.getWallet() == getLatestBlock().getWallet()) {
+            return false;
+        }
+
+        //check if prev sig matches up
+        if (!Arrays.equals(Arrays.copyOfRange(getLatestBlock().getSig(), 0, 8), newBlock.getPrev_sig())){
+            return false;
+        }
+
+        //check if signature matches up
+        if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
+            // TODO temporary, for debugging purposes
+            System.out.println(Arrays.toString(newBlock.toBytes()));
+            System.out.println(Arrays.toString(newBlock.calcMD5()));
+            return false;
+        }
+
+
+        //check if puzzle is solved
+        int index = 15; //iterating from end to start
+        int numZerosToCheck = newBlock.calcNZ();
+        while (numZerosToCheck >= 8) {
+            if (digest[index] != 0) {
+                return false;
+            }
+            --index;
+            numZerosToCheck -= 8;
+        }
+
+        //there are less than 8 bits to check
+        if (numZerosToCheck > 0) { //there are bits left
+            //mask
+            return (digest[index] & ((1 << numZerosToCheck) - 1)) == 0;
+        }
+        return true;
     }
 
     public static boolean isUpdateNeeded(ArrayList<Block> newBlockchain) throws NoSuchAlgorithmException {
@@ -134,37 +275,66 @@ public class Database {
         }
 
         //to prevent errors
-        if (newBlockchain.size() == 0 || blockchain.size() == newBlockchain.size()){
+        if (newBlockchain.size() == 0){
             return false;
         }
 
         //first, check the new chain is longer.
-        if (newBlockchain.size() <= blockchain.size()) {
+        if (newBlockchain.size() < blockchain.size()) {
             return false;
         }
-        //check that the chains match up
-        if (!blockchain.get(blockchain.size() - 1).equals(newBlockchain.get(blockchain.size() - 1))) {
+        //find until where the chains add up
+        int lastCommon = findLastCommonBlock(newBlockchain);
+        System.out.println("last common block " + blockchain.get(lastCommon));
+        if (lastCommon < 0){
+            System.out.println("wrong genesis");
+            return false; //wrong genesis
+        }
+
+        if (blockchain.size() == newBlockchain.size()){ //we need to take the one with the lower puzzle
+            System.out.println("chose one because puzzle shorter");
+            Block currLast = blockchain.get(blockchain.size() - 1);
+            Block newlast = newBlockchain.get(newBlockchain.size() - 1);
+            for (int i = 0; i < 8; i++) {
+                if (currLast.getPuzzle()[i] < newlast.getPuzzle()[i]) {
+                    return false;
+                }
+                if (currLast.getPuzzle()[i] > newlast.getPuzzle()[i]) {
+                    return true;
+                }
+            }
             return false;
         }
+
+
         //now validate the next blocks
-        for (int i = blockchain.size() ; i < newBlockchain.size() ; ++i){
+        for (int i = lastCommon+1 ; i < newBlockchain.size() ; ++i){
             Block newBlock = newBlockchain.get(i);
-            byte[] digest = newBlock.calcSig();
+            byte[] digest = newBlock.calcMD5();
 
             //check if serial number is one more than previous one
-            if (newBlock.getSerial_number() != newBlockchain.get(i-1).getSerial_number() + 1) {
+            if (newBlock.getSerial_number() != newBlockchain.get(i - 1).getSerial_number() + 1) {
                 return false;
             }
 
             //check if wallet number is different than the last one
-            if (newBlock.getWallet() == newBlockchain.get(i-1).getWallet()) {
+            if (newBlock.getWallet() == newBlockchain.get(i - 1).getWallet()) {
+                return false;
+            }
+
+            //check if prev sig matches up
+            if (!Arrays.equals(Arrays.copyOfRange(newBlockchain.get(i-1).getSig(), 0, 8), newBlock.getPrev_sig())){
                 return false;
             }
 
             //check if signature matches up
-            if (!Arrays.equals(digest, newBlock.getSig())) {
+            if (!Arrays.equals(Arrays.copyOfRange(digest, 0, 12), newBlock.getSig())) {
+                // TODO temporary, for debugging purposes
+                System.out.println(Arrays.toString(newBlock.toBytes()));
+                System.out.println(Arrays.toString(newBlock.calcMD5()));
                 return false;
             }
+
 
             //check if puzzle is solved
             int index = 15; //iterating from end to start
@@ -185,6 +355,18 @@ public class Database {
             }
         }
         return true;
+    }
+
+    /*
+    @pre blockchain.size() <= newBlockchain.size()
+     */
+    public static int findLastCommonBlock(ArrayList<Block> newBlockchain){
+        for (int i = blockchain.size() - 1 ; i >= 0 ; --i){
+            if (blockchain.get(i).equals(newBlockchain.get(i))){
+                return i;
+            }
+        }
+        return -1 ;
     }
 
 

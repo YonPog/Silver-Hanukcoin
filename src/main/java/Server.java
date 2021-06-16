@@ -7,6 +7,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -14,19 +15,30 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Server {
     private final String HOST;
     private final int PORT;
+    private final Miner miner;
+    private final int[] lastChange = new int[1];
+    private ConcurrentLinkedQueue<Node> sendQueue;
+
 
     public Server(String host, int port) throws IOException {
         this.HOST = host;
         this.PORT = port;
+        this.miner = new Miner(8, this);
 
         // Add this host (ourselves)
-        Node self = new Node("Silver", HOST, PORT, getCurrentEpoch());
+        Node self = new Node(Main.NAME, HOST, PORT, getCurrentEpoch());
         self.setNew(false);
         Database.setNode(new Pair<>(host, port), self);
 
         // TODO temporary - change to a dynamic first node (maybe reading from db)
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
+        //Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch());
+        Node backup2 = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch());
         Database.setNode(new Pair<>(franji.getHost(), franji.getPort()), franji);
+        //Database.setNode(new Pair<>(backup1.getHost(), backup1.getPort()), backup1);
+        Database.setNode(new Pair<>(backup2.getHost(), backup2.getPort()), backup2);
+
+
         System.out.format("[*] Successfully initialized server on %s:%d\n", HOST, PORT);
     }
 
@@ -35,15 +47,15 @@ public class Server {
      */
     public void startServer() {
 
-        ConcurrentLinkedQueue<Node> sendQueue = new ConcurrentLinkedQueue<>(); // nodes to send to them
+        sendQueue = new ConcurrentLinkedQueue<>(); // nodes to send to them
 
         // last time a request to 3 nodes was sent
-        final int[] lastChange = {getCurrentEpoch()}; // array because Java wanted so (for it to be final)
+        lastChange[0] = getCurrentEpoch(); // array because Java wanted so (for it to be final)
 
         Node franji = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
         sendQueue.add(franji);
         // send initialization messages to all known nodes.
-        sendQueue.addAll(Database.getNodes().values());
+        //sendQueue.addAll(Database.getNodes().values());
 
         /**
          * Waiting for connections, updating and adding to send queue
@@ -76,7 +88,7 @@ public class Server {
                         }
                     } catch (IOException e) {
                         System.out.format("[!] ERROR accepting connection. Details:\n%s", e.toString());
-                        return;
+                        continue;
                     }
                 }
             }
@@ -112,7 +124,7 @@ public class Server {
                     // update database and variables according to the new information
                     // and adding to sendQueue if something changed
                     try {
-                        updateDatabase(message, lastChange, sendQueue);
+                        updateDatabase(message);
                     } catch (IOException e) {
                         System.out.println("[!] ERROR writing node change");
                     }
@@ -120,7 +132,9 @@ public class Server {
                     System.out.println("[*] creating the response for this message");
                     try {
                         // building the response based on the network state
-                        conn.send(buildMessage(2));
+                        conn.send(generateMessage(2));
+                        // closing the socket for good
+                        conn.close();
                     } catch (IOException e) {
                         System.out.format("[!] ERROR failed to respond to %s:%d\n.Details:\n %s\n",
                                 socket.getInetAddress().toString(),
@@ -154,14 +168,14 @@ public class Server {
                     // update timestamp of ourselves
                     Database.getNode(new Pair<>(HOST, PORT)).setLast_seen_ts(getCurrentEpoch());
                     // open new sockets for new messages
-                    if (!sendQueue.isEmpty()) { // there is someone we need to send a message to
+                    while (!sendQueue.isEmpty()) { // there is someone we need to send a message to
                         Node target = sendQueue.remove(); // retrieves the head of the queue and deletes it
                         try {
                             Socket sock = new Socket(target.getHost(), target.getPort());
                             // create the connection
                             Connection conn = new Connection(sock);
                             // build the request and send it
-                            conn.send(buildMessage(1));
+                            conn.send(generateMessage(1));
                             // add the socket to the pending arraylist
                             pending.add(new Pair<>(conn, target));
                         } catch (Exception e) {
@@ -169,12 +183,14 @@ public class Server {
                                     target.getHost(),
                                     target.getPort(),
                                     e.toString());
-                            return;
+                            continue;
                         }
                     }
 
                     // still in the infinite loop, check if a connecion in the pending list has data to receive
-                    for (Pair<Connection, Node> pair : pending){
+                    Iterator<Pair<Connection, Node>> iter = pending.iterator();
+                    while (iter.hasNext()) {
+                        Pair<Connection, Node> pair = iter.next();
                         Connection conn = pair.getKey();
                         Node target = pair.getValue();
                         try {
@@ -184,7 +200,7 @@ public class Server {
                                 // and adding to sendQueue if something changed
                                 new Thread(() -> {
                                     try {
-                                        updateDatabase(msg, lastChange, sendQueue);
+                                        updateDatabase(msg);
                                     } catch (IOException e) {
                                         System.out.format("[!] ERROR updating database\nDetails:\n%s\n", e.toString());
                                     }
@@ -192,14 +208,18 @@ public class Server {
                                 // update new status, because the node responded to us
                                 Database.getNode(new Pair<>(target.getHost(), target.getPort())).setNew(false);
                                 System.out.format("[*] updated status to verified: %s", target.toString());
+                                // remove node from pending
+                                iter.remove();
+                                // close the socket for good
+                                conn.close();
 
                             }
                         } catch (Exception e) {
-                            System.out.format("[!] ERROR receiving message to %s:%d\nDetails:\n%s",
+                            System.out.format("[!] ERROR receiving message from %s:%d\nDetails:\n%s",
                                     target.getHost(),
                                     target.getPort(),
                                     e.toString());
-                            return;
+                            continue;
                         }
                     }
 
@@ -210,11 +230,9 @@ public class Server {
         // don't forget we're still inside runServer ;)
         new ServerThread().start();
         new SenderThread().start();
+        miner.start();
 
         while (true) {
-
-            // TODO
-            Database.saveToMongoDB();
 
             try {
                 Thread.sleep(60000); // check for changes every minute
@@ -227,12 +245,13 @@ public class Server {
             for (Node n : Database.getNodes().values()) {
                 System.out.print("\t" + n.toString());
             }
+            // addNodesToSend(Database.getNodes());
 
             if (lastChange[0] + 300 < getCurrentEpoch()) { // if no change in the last 5 minutes
                 System.out.println("[*] no change in 5 minutes, adding 3 random nodes to sendQueue");
                 lastChange[0] = getCurrentEpoch();
                 // add 3 random nodes from the HashMap
-                addNodesToSend(Database.getNodes(), sendQueue);
+                addNodesToSend(Database.getNodes());
             }
 
             // delete every node that wasn't seen in the last 30 minutes
@@ -279,7 +298,7 @@ public class Server {
      * @param cmd The cmd field of the message to be sent
      * @return The message built from cmd and the state of the network (nodes and blockchain)
      */
-    public Message buildMessage(int cmd) {
+    public Message generateMessage(int cmd) {
         // only sending verified nodes
         ArrayList<Node> nodesToSend = new ArrayList<>();
         for (Node n : Database.getNodes().values()) {
@@ -293,12 +312,24 @@ public class Server {
         return new Message(cmd, nodesToSend, blocksList);
     }
 
+
+    public void parseSolvedPuzzle(Block nextBlock){
+        System.out.println("Parsing solved puzzle");
+        try {
+            Database.update(nextBlock);
+            miner.updateBlock(nextBlock);
+            lastChange[0] = getCurrentEpoch();
+            addNodesToSend(Database.getNodes());
+
+        } catch (IOException | NoSuchAlgorithmException e) {
+            System.out.format("[!] ERROR parsing new block");
+        }
+    }
+
     /**
      * @param message    The message containing (possibly new) data
-     * @param lastChange The last time a message to 3 nodes was sent, needs update if the network state changed in this function
-     * @param sendQueue  The queue to add 3 nodes to send a message to if needed
      */
-    synchronized public void updateDatabase(Message message, int[] lastChange, ConcurrentLinkedQueue<Node> sendQueue) throws IOException {
+    synchronized public void updateDatabase(Message message) throws IOException {
         // update the blockchain
         int statusCode;
         try {
@@ -311,7 +342,10 @@ public class Server {
         // update nodes if necessary
         boolean changed = statusCode != 0; // check if blockchain changed
         if (statusCode != 0) {
-            System.out.println("[*] sending new messages because blockchain changed");
+            System.out.println("[*] sending new messages and updating Miner thread because blockchain changed");
+            miner.blockchainChanged.set(true);
+            miner.updateBlock(Database.getLatestBlock());
+            System.out.println("Blockchain changed!");
         }
         // check for changes in nodes and update the HashMap
         for (Node n : message.getNodes()) {
@@ -333,18 +367,23 @@ public class Server {
         }
         if (changed) {
             lastChange[0] = getCurrentEpoch();
-            addNodesToSend(Database.getNodes(), sendQueue);
+            addNodesToSend(Database.getNodes());
         }
     }
 
     /**
      * @param map       The HashMap of the nodes
-     * @param sendQueue The queue to add the nodes to
      */
-    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map,
-                               ConcurrentLinkedQueue<Node> sendQueue) {
+    public void addNodesToSend(ConcurrentHashMap<Pair<String, Integer>, Node> map) {
         ArrayList<Node> toAdd = chooseNodes(map);
         sendQueue.addAll(toAdd);
+        //TODO temporary until we can trust the network
+        Node backup1 = new Node("Silver3", "84.94.46.252", 22, getCurrentEpoch());
+        Node backup2 = new Node("Silver2", "82.81.206.242", 1337, getCurrentEpoch());
+        Node backup3 = new Node("Earth", "35.246.17.73", 8080, getCurrentEpoch());
+        //sendQueue.add(backup1);
+        //sendQueue.add(backup2);
+        sendQueue.add(backup3);
     }
 
     /**
